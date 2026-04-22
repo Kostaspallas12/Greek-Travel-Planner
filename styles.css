@@ -1,0 +1,315 @@
+:root {
+  --sky: #3BBFCF;
+  --sky-dark: #2A9AAA;
+  --sky-light: #E8F7FA;
+  --ocean: #1A5F7A;
+  --sand: #F5F0E8;
+  --coral: #FF6B6B;
+  --gold: #F4A836;
+  --green: #4CAF82;
+  --text: #1E2A35;
+  --text-muted: #6B7C8D;
+  --border: #D8E4EA;
+  --white: #FFFFFF;
+  --shadow: 0 4px 24px rgba(26,95,122,0.10);
+  --shadow-lg: 0 8px 40px rgba(26,95,122,0.16);
+  --radius: 14px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--sand);
+  min-height: 100vh;
+  color: var(--text);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: -120px; right: -120px;
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(59,191,207,0.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -80px; left: -80px;
+  width: 360px; height: 360px;
+  background: radial-gradient(circle, rgba(244,168,54,0.13) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.app { max-width: 960px; margin: 0 auto; padding: 40px 20px 60px; }
+
+/* ── Header ── */
+.header { text-align: center; margin-bottom: 40px; animation: fadeDown 0.6s ease; }
+.header-icon { font-size: 2.4rem; margin-bottom: 8px; display: block; }
+.header h1 { font-family: 'DM Serif Display', serif; font-size: 2.2rem; color: var(--ocean); letter-spacing: -0.5px; }
+.header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 6px; }
+
+/* ── Card ── */
+.card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 32px; animation: fadeUp 0.5s ease; }
+
+/* ── Form ── */
+.form-section-title { font-size: 0.7rem; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.route-wrapper { display: flex; gap: 0; }
+.route-line { display: flex; flex-direction: column; align-items: center; padding-top: 10px; margin-right: 14px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--sky); background: var(--white); flex-shrink: 0; }
+.dot.filled { background: var(--sky); }
+.line-seg { width: 2px; flex: 1; min-height: 20px; background: repeating-linear-gradient(to bottom, var(--sky) 0, var(--sky) 6px, transparent 6px, transparent 10px); }
+.route-inputs { flex: 1; display: flex; flex-direction: column; gap: 0; }
+.input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.input-wrap { position: relative; flex: 1; }
+.input-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.9rem; }
+.form-input { width: 100%; padding: 11px 14px 11px 36px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); background: var(--white); transition: border-color 0.2s, box-shadow 0.2s; outline: none; }
+.form-input:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(59,191,207,0.12); }
+.form-input::placeholder { color: #B0BEC5; }
+.add-stop-btn { display: flex; align-items: center; gap: 8px; padding: 9px 16px; border: 1.5px dashed var(--sky); border-radius: var(--radius-sm); background: transparent; color: var(--sky-dark); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; width: 100%; }
+.add-stop-btn:hover { background: var(--sky-light); }
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+input[type="date"] { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); outline: none; transition: border-color 0.2s; background: white; }
+input[type="date"]:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(59,191,207,0.12); }
+.search-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--sky) 0%, var(--sky-dark) 100%); border: none; border-radius: var(--radius-sm); color: white; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.25s; box-shadow: 0 4px 14px rgba(59,191,207,0.35); margin-top: 20px; }
+.search-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,191,207,0.45); }
+.search-btn:active { transform: translateY(0); }
+
+/* ── Results ── */
+#results { margin-top: 32px; display: none; }
+.results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.results-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--ocean); }
+.trip-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+.meta-chip { display: flex; align-items: center; gap: 5px; padding: 5px 12px; background: var(--sky-light); border-radius: 20px; font-size: 0.82rem; font-weight: 500; color: var(--ocean); }
+.stops-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; color: var(--ocean); margin-bottom: 16px; }
+
+/* ── Animations ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Loader ── */
+.loading-overlay { display: none; position: fixed; inset: 0; background: rgba(245,240,232,0.85); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+.loader { width: 48px; height: 48px; border: 3px solid var(--sky-light); border-top-color: var(--sky); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 1rem; color: var(--ocean); font-weight: 500; }
+
+/* ── Autocomplete ── */
+.autocomplete-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1.5px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); z-index: 50; display: none; overflow: hidden; }
+.autocomplete-item { padding: 10px 14px; cursor: pointer; transition: background 0.15s; }
+.autocomplete-item:hover { background: var(--sky-light); }
+.autocomplete-main { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.autocomplete-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Stop row ── */
+.stop-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.field { position: relative; flex: 1; }
+.input.place-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); background: var(--white); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.input.place-input:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(59,191,207,0.12); }
+.icon-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #FFB3B3; background: #FFF5F5; color: var(--coral); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; transition: all 0.2s; flex-shrink: 0; }
+.icon-btn:hover { background: var(--coral); color: white; }
+
+/* ── Error box ── */
+#errorBox { display: none; background: #FFF5F5; border: 1.5px solid #FFB3B3; color: var(--coral); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.9rem; margin-top: 12px; }
+#loader { display: none; }
+
+/* ── Leg cards ── */
+.leg-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  /* ΔΕΝ έχει overflow:hidden — το χρειαζόμαστε για την toll card */
+  border-left: 4px solid var(--sky);
+}
+.leg-head { padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+.leg-head h3 { font-size: 1rem; font-weight: 600; color: var(--text); }
+.leg-head p { font-size: 0.82rem; color: var(--text-muted); margin-top: 3px; }
+.leg-body { padding: 0 22px; max-height: 0; overflow: hidden; transition: max-height 0.35s ease, padding 0.2s; }
+.leg-body.open { max-height: 900px; padding: 0 22px 22px; }
+
+.cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+.cost-box { background: var(--sand); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; }
+.cost-box small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; display: block; margin-bottom: 3px; }
+.cost-box strong { font-size: 1rem; color: var(--text); }
+
+.place-list { display: flex; flex-direction: column; gap: 10px; }
+.place-item { background: var(--sky-light); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 0.88rem; }
+.place-item strong { display: block; color: var(--ocean); margin-bottom: 4px; }
+.place-item .muted { color: var(--text-muted); line-height: 1.5; }
+
+/* ── Sum grid ── */
+#routeTitle { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--ocean); }
+.sum-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.sum-box { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; text-align: center; }
+.sum-box small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; display: block; margin-bottom: 4px; }
+.sum-box strong { font-size: 1.05rem; color: var(--text); }
+.sum-box-total { border: 2px solid var(--sky-light); }
+.sum-box-total strong { color: var(--ocean); font-size: 1.15rem; }
+
+/* ── Toll card ── */
+/* Προσοχή: ΔΕΝ έχει overflow:hidden ώστε τα stations να μπορούν να ανοίξουν */
+.toll-card {
+  border-left-color: var(--gold) !important;
+  margin-bottom: 20px;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--gold);
+}
+.toll-card .leg-head h3 { color: var(--text); }
+.toll-card .leg-head p { color: var(--text-muted); }
+.toll-card .leg-head p span { color: #B8720A; font-weight: 600; }
+
+/* Το body της toll card — overflow visible για να δουλεύουν τα dropdowns */
+.toll-card .leg-body {
+  padding: 0 22px;
+  max-height: 0;
+  overflow: visible;
+  transition: max-height 0.35s ease, padding 0.2s;
+}
+.toll-card .leg-body.open {
+  max-height: 2000px;
+  padding: 0 22px 22px;
+}
+
+/* Highways */
+.toll-hw-list { display: flex; flex-direction: column; gap: 4px; }
+.toll-hw-item { display: flex; flex-direction: column; }
+
+.toll-hw-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--sand);
+  transition: background 0.15s;
+  user-select: none;
+}
+.toll-hw-row:hover { background: #EEE8DC; }
+.toll-hw-row.active { background: #FEF4E4; }
+
+.toll-hw-toggle {
+  width: 36px; height: 20px;
+  background: var(--border);
+  border-radius: 10px;
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toll-hw-toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  background: white;
+  border-radius: 50%;
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toll-hw-row.active .toll-hw-toggle { background: var(--gold); }
+.toll-hw-row.active .toll-hw-toggle::after { transform: translateX(16px); }
+
+.toll-hw-name { flex: 1; font-size: 0.88rem; color: var(--text); font-weight: 500; }
+.toll-hw-price { font-size: 0.88rem; font-weight: 600; color: var(--text-muted); min-width: 52px; text-align: right; }
+.toll-hw-row.active .toll-hw-price { color: #B8720A; }
+
+/* Stations — ξεκινούν κλειστά */
+.toll-stations-wrap {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+.toll-stations-wrap.open { max-height: 600px; }
+
+.toll-stations-inner {
+  padding: 6px 12px 10px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #FAFAF8;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  margin: 0 0 4px 0;
+}
+
+.toll-st-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.83rem;
+}
+.toll-st-row:last-child { border-bottom: none; }
+.toll-st-row input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--gold); cursor: pointer; flex-shrink: 0; }
+.toll-st-name { flex: 1; color: var(--text-muted); }
+.toll-st-name.checked { color: var(--text); font-weight: 500; }
+.toll-st-price { font-size: 0.82rem; color: #B8720A; font-weight: 600; min-width: 48px; text-align: right; }
+
+.toll-expand-btn {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+  line-height: 1;
+}
+.toll-expand-btn.open { transform: rotate(90deg); }
+
+/* ── Καιρός ── */
+.weather-item { background: linear-gradient(135deg, #e8f4fd 0%, #f0f8e8 100%); border-radius: var(--radius-sm); padding: 12px 14px; border: 1px solid #c8e6f9; }
+.weather-details { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.weather-icon { font-size: 1.6rem; line-height: 1; }
+.weather-desc { font-size: 0.9rem; color: #555; font-weight: 500; }
+.weather-temp { display: flex; gap: 6px; font-size: 0.88rem; font-weight: 600; }
+.temp-max { color: #e07030; }
+.temp-min { color: #3080c8; }
+.weather-rain { font-size: 0.82rem; color: #3080c8; background: #dbeeff; padding: 2px 8px; border-radius: 20px; }
+
+/* ── PDF Section ── */
+.pdf-section { margin-top: 32px; padding: 24px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.pdf-note { font-size: 0.85rem; color: var(--text-muted); flex: 1; min-width: 200px; line-height: 1.5; }
+.pdf-btn { display: flex; align-items: center; gap: 10px; padding: 13px 28px; background: linear-gradient(135deg, var(--ocean) 0%, #1A7A9A 100%); border: none; border-radius: var(--radius-sm); color: white; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.25s; box-shadow: 0 4px 14px rgba(26,95,122,0.3); white-space: nowrap; }
+.pdf-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,95,122,0.4); }
+
+/* ── Print ── */
+@media print {
+  body { background: white !important; }
+  body::before, body::after { display: none !important; }
+  .card, .leg-card { box-shadow: none !important; border: 1px solid #ddd; }
+  .loading-overlay, .search-btn, .add-stop-btn, .pdf-section, .toll-card { display: none !important; }
+  .leg-body { max-height: none !important; padding: 0 22px 22px !important; overflow: visible !important; }
+  .sum-box, .cost-box { box-shadow: none !important; border: 1px solid #ddd; }
+  .app { padding: 20px !important; }
+  #results { display: block !important; }
+  a[href]::after { content: none !important; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
+  .cost-grid { grid-template-columns: repeat(2, 1fr); }
+  .sum-grid { grid-template-columns: repeat(2, 1fr); }
+  .pdf-section { flex-direction: column; align-items: stretch; }
+  .pdf-btn { justify-content: center; }
+}
+
+/* ── Footer ── */
+.site-footer {
+  text-align: center;
+  padding: 32px 20px 20px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+.site-footer a { color: var(--sky-dark); text-decoration: none; font-weight: 500; }
+.site-footer a:hover { text-decoration: underline; }
