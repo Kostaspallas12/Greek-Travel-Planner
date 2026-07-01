@@ -7,7 +7,7 @@
   <meta name="description" content="Πολιτική Απορρήτου του Travel Planner Greece.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.travelplanner.gr/privacy.html">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/png" sizes="30px" href="business-trip.png">
   <style>
@@ -15,12 +15,13 @@
       background: white;
       border-radius: var(--radius);
       box-shadow: var(--shadow);
+      border: 1px solid var(--border);
       padding: 40px;
       line-height: 1.8;
     }
     .privacy-card h1 {
-      font-family: 'DM Serif Display', serif;
-      color: var(--ocean);
+      font-family: 'Playfair Display', serif;
+      color: var(--navy);
       font-size: 1.8rem;
       margin-bottom: 8px;
     }
@@ -32,7 +33,7 @@
     .privacy-card h2 {
       font-size: 1.05rem;
       font-weight: 600;
-      color: var(--ocean);
+      color: var(--navy);
       margin: 28px 0 10px;
     }
     .privacy-card p {
@@ -50,7 +51,7 @@
       margin-bottom: 6px;
     }
     .privacy-card a {
-      color: var(--sky-dark);
+      color: var(--blue);
       text-decoration: none;
     }
     .privacy-card a:hover { text-decoration: underline; }
@@ -58,7 +59,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: var(--sky-dark);
+      color: var(--blue);
       font-size: 0.88rem;
       font-weight: 600;
       text-decoration: none;
@@ -68,13 +69,21 @@
   </style>
 </head>
 <body>
-<div class="app">
 
-  <div class="header">
-    <span class="header-icon"></span>
-    <h1>Οργάνωσε το ταξίδι σου</h1>
-    <p>Σχεδίασε τη διαδρομή σου, βρες αξιοθέατα και εκτίμησε το κόστος</p>
+<!-- ── Navbar ── -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-logo"><a href="index.html" style="text-decoration:none;color:inherit;">Travel Planner <span>Greece</span></a></div>
+    <div class="nav-links">
+      <a href="index.html">Αρχή</a>
+      <a href="index.html#planner">Πώς λειτουργεί</a>
+      <a href="privacy.html">Απόρρητο</a>
+    </div>
+    <a href="index.html" class="nav-cta">Ξεκίνα →</a>
   </div>
+</nav>
+
+<div class="app" style="padding-top: 40px;">
 
   <a href="index.html" class="back-link">← Επιστροφή στην αρχική</a>
 
