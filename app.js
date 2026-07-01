@@ -432,7 +432,7 @@ async function renderResults({ places, route, settings, tripInfo }) {
 
 async function handleSearch() {
   clearError();
-  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes("ΒΑΛΕ_ΕΔΩ")) { showError("Βάλε πρώτα το Geoapify API key σου."); return; }
+  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes("ΒΑΛΕ_ΕΔΩ") || GEOAPIFY_KEY.includes("REPLACE")) { showError("Βάλε πρώτα το Geoapify API key σου στη μεταβλητή GEOAPIFY_KEY στο app.js."); return; }
   const { originInput, destinationInput, stopInputs } = collectRouteInputs();
   if (!originInput || !destinationInput) { showError("Λείπουν βασικά πεδία της φόρμας."); return; }
   if (!originInput.value.trim() || !destinationInput.value.trim()) { showError("Συμπλήρωσε αφετηρία και προορισμό."); return; }
@@ -462,6 +462,145 @@ async function handleSearch() {
   } finally { showLoader(false); }
 }
 
+// ─── DESTINATION GUIDE ──────────────────────────────────────────────────────
+
+const GUIDE_CAT_ICONS = {
+  'catering.restaurant': '🍽️', 'catering.cafe': '☕', 'catering.bar': '🍻',
+  'catering.fast_food': '🍔', 'tourism.attraction': '🏛️', 'tourism.sights': '🗺️',
+  'entertainment.museum': '🏺', 'entertainment.nightclub': '🎉',
+  'leisure.park': '🌿', 'natural': '🌲', 'commercial.shopping_mall': '🛍️',
+  'commercial': '🛒', 'leisure.beach_resort': '🏖️', 'natural.water': '🌊',
+};
+
+const GUIDE_CAT_LABELS = {
+  'catering.restaurant': 'Εστιατόριο', 'catering.cafe': 'Καφέ', 'catering.bar': 'Μπαρ',
+  'catering.fast_food': 'Fast food', 'tourism.attraction': 'Αξιοθέατο',
+  'tourism.sights': 'Αξιοθέατο', 'entertainment.museum': 'Μουσείο',
+  'entertainment.nightclub': 'Νυχτερινό κέντρο', 'leisure.park': 'Πάρκο',
+  'natural': 'Φύση', 'commercial.shopping_mall': 'Εμπορικό κέντρο',
+  'commercial': 'Κατάστημα', 'leisure.beach_resort': 'Παραλία', 'natural.water': 'Παραλία / Θαλάσσιο',
+};
+
+function guideCatIcon(cat) {
+  if (!cat) return '📍';
+  for (const [k, v] of Object.entries(GUIDE_CAT_ICONS)) { if (cat.startsWith(k)) return v; }
+  return '📍';
+}
+
+function guideCatLabel(cat) {
+  if (!cat) return '';
+  for (const [k, v] of Object.entries(GUIDE_CAT_LABELS)) { if (cat.startsWith(k)) return v; }
+  return cat.replace(/\./g, ' · ');
+}
+
+async function fetchGuidePlaces(lat, lon, cats, limit) {
+  const url = `https://api.geoapify.com/v2/places?categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
+  try {
+    const data = await apiJson(url);
+    return (data.features || []).map(f => ({
+      name: f.properties?.name,
+      address: f.properties?.address_line2 || f.properties?.city || '',
+      category: (f.properties?.categories || [])[0] || cats.split(',')[0],
+    })).filter(p => p.name && p.name.trim().length > 0);
+  } catch { return []; }
+}
+
+async function handleGuideSearch() {
+  const destInput = qs('guideDestination');
+  const daysInput = qs('guideDays');
+  const errBox = qs('guideErrorBox');
+  const showErr = msg => { if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; } };
+  const clearErr = () => { if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; } };
+  clearErr();
+
+  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes('REPLACE')) {
+    showErr('Δεν έχει οριστεί Geoapify API key. Άνοιξε το app.js και βάλε το key σου στη μεταβλητή GEOAPIFY_KEY.');
+    return;
+  }
+  if (!destInput?.value.trim()) { showErr('Συμπλήρωσε τον προορισμό.'); return; }
+
+  const days = Math.min(14, Math.max(1, parseInt(daysInput?.value) || 3));
+  const interests = Array.from(document.querySelectorAll('input[name="interest"]:checked')).map(cb => cb.value);
+  if (!interests.length) { showErr('Επίλεξε τουλάχιστον ένα ενδιαφέρον.'); return; }
+
+  try {
+    showLoader(true);
+
+    let place;
+    if (destInput.dataset.lat && destInput.dataset.lon && destInput.value === destInput.dataset.label) {
+      place = { name: destInput.dataset.name || destInput.value, lat: +destInput.dataset.lat, lon: +destInput.dataset.lon };
+    } else {
+      place = await geocodePlace(destInput.value.trim());
+    }
+
+    const limit = Math.max(4, Math.ceil(days * 4 / interests.length) + 2);
+    const groups = await Promise.all(interests.map(cats => fetchGuidePlaces(place.lat, place.lon, cats, limit)));
+
+    // Interleave results so each day gets a mix of categories
+    const interleaved = [];
+    const maxLen = Math.max(0, ...groups.map(g => g.length));
+    for (let i = 0; i < maxLen; i++) {
+      for (const g of groups) { if (i < g.length) interleaved.push(g[i]); }
+    }
+
+    // 4 places per day
+    const dayPlans = [];
+    for (let d = 0; d < days; d++) {
+      const chunk = interleaved.slice(d * 4, (d + 1) * 4);
+      if (chunk.length) dayPlans.push(chunk);
+    }
+
+    renderGuideResults(place.name, dayPlans);
+  } catch (err) {
+    console.error(err);
+    if (errBox) { errBox.textContent = err.message || 'Σφάλμα κατά την αναζήτηση.'; errBox.style.display = 'block'; }
+  } finally {
+    showLoader(false);
+  }
+}
+
+function renderGuideResults(cityName, dayPlans) {
+  const resultsEl = qs('guideResults');
+  const titleEl = qs('guideResultsTitle');
+  const cardsEl = qs('guideDayCards');
+  if (!resultsEl || !cardsEl) return;
+
+  if (titleEl) titleEl.textContent = `Πρόγραμμα: ${cityName}`;
+  cardsEl.innerHTML = '';
+
+  if (!dayPlans.length) {
+    cardsEl.innerHTML = '<p style="color:var(--text-muted);padding:16px 0;">Δεν βρέθηκαν τοποθεσίες για τα επιλεγμένα ενδιαφέροντα. Δοκίμασε διαφορετικά ενδιαφέροντα ή άλλον προορισμό.</p>';
+    resultsEl.style.display = 'block';
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  dayPlans.forEach((places, i) => {
+    const card = document.createElement('div');
+    card.className = 'guide-day-card';
+    card.innerHTML = `
+      <div class="guide-day-head">
+        <h3>Ημέρα ${i + 1}</h3>
+        <span class="guide-day-count">${places.length} τοποθεσίες</span>
+      </div>
+      <div class="guide-day-body">
+        ${places.map(p => `
+          <div class="guide-place-card">
+            <div class="guide-place-icon">${guideCatIcon(p.category)}</div>
+            <div class="guide-place-info">
+              <div class="guide-place-name">${escapeHtml(p.name)}</div>
+              <div class="guide-place-type">${escapeHtml(guideCatLabel(p.category))}</div>
+              ${p.address ? `<div class="guide-place-address">${escapeHtml(p.address)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>`;
+    cardsEl.appendChild(card);
+  });
+
+  resultsEl.style.display = 'block';
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function downloadPDF() {
   document.querySelectorAll(".leg-body").forEach(b => b.classList.add("open"));
   setTimeout(() => window.print(), 300);
@@ -472,6 +611,8 @@ function initApp() {
   const searchBtn = qs("searchBtn");
   if (addStopBtn) addStopBtn.addEventListener("click", () => { const c = qs("stopsContainer"); if (c) c.appendChild(createStopRow()); });
   if (searchBtn) searchBtn.addEventListener("click", handleSearch);
+  const guideSearchBtn = qs("guideSearchBtn");
+  if (guideSearchBtn) guideSearchBtn.addEventListener("click", handleGuideSearch);
   initBaseAutocomplete();
   ["origin","destination"].forEach(id => { const el = qs(id); if (el) { el.value = ""; el.dataset.name = el.dataset.label = el.dataset.lat = el.dataset.lon = ""; } });
   const sc = qs("stopsContainer"); if (sc) sc.innerHTML = "";
