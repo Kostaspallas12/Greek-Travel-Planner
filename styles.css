@@ -74,6 +74,20 @@ body {
   transition: background 0.2s, transform 0.15s;
 }
 .nav-cta:hover { background: var(--blue-dark); transform: translateY(-1px); }
+.lang-btn {
+  padding: 7px 14px;
+  border: 1.5px solid #94a3b8;
+  border-radius: 7px;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.lang-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-xlight); }
 
 /* ── Hero ── */
 .hero {

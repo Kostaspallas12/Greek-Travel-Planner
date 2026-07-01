@@ -58,7 +58,7 @@
 
 <div class="loading-overlay" id="loader">
   <div class="loader"></div>
-  <div class="loading-text">Υπολογισμός διαδρομής...</div>
+  <div class="loading-text" data-i18n="loading">Υπολογισμός διαδρομής...</div>
 </div>
 
 <!-- ── Navbar ── -->
@@ -66,12 +66,15 @@
   <div class="nav-inner">
     <div class="nav-logo">Travel Planner <span>Greece</span></div>
     <div class="nav-links">
-      <a href="#">Αρχή</a>
-      <a href="#planner" onclick="event.preventDefault();document.getElementById('planner').scrollIntoView({behavior:'smooth'})">Πλάνο Διαδρομής</a>
-      <a href="#guide" onclick="event.preventDefault();document.getElementById('guide').scrollIntoView({behavior:'smooth'})">Οδηγός Προορισμού</a>
-      <a href="privacy.html">Απόρρητο</a>
+      <a href="#" data-i18n="nav_home">Αρχή</a>
+      <a href="#planner" onclick="event.preventDefault();document.getElementById('planner').scrollIntoView({behavior:'smooth'})" data-i18n="nav_planner">Πλάνο Διαδρομής</a>
+      <a href="#guide" onclick="event.preventDefault();document.getElementById('guide').scrollIntoView({behavior:'smooth'})" data-i18n="nav_guide">Οδηγός Προορισμού</a>
+      <a href="privacy.html" data-i18n="nav_privacy">Απόρρητο</a>
     </div>
-    <button class="nav-cta" onclick="document.querySelector('.card').scrollIntoView({behavior:'smooth'})">Ξεκίνα →</button>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="lang-btn" id="langBtn">EN</button>
+      <button class="nav-cta" onclick="document.querySelector('.card').scrollIntoView({behavior:'smooth'})" data-i18n="nav_cta">Ξεκίνα →</button>
+    </div>
   </div>
 </nav>
 
@@ -85,10 +88,9 @@
   </div>
 
   <div class="hero-inner">
-    <div class="hero-badge">ΔΩΡΕΑΝ ΕΡΓΑΛΕΙΟ ΤΑΞΙΔΙΟΥ ΣΤΗΝ ΕΛΛΑΔΑ</div>
-    <h1 class="hero-title">Κάθε ταξίδι ξεκινά<br>με <span class="hero-accent">ένα καλό πλάνο.</span></h1>
-    <p class="hero-subtitle">Σχεδίασε τη διαδρομή σου, υπολόγισε κόστος βενζίνης,<br>διόδια και βρες αξιοθέατα στην Ελλάδα.</p>
-    <button class="hero-cta" onclick="document.querySelector('.card').scrollIntoView({behavior:'smooth'})">Ξεκίνα τώρα →</button>
+<h1 class="hero-title" data-i18n-html="hero_title">Κάθε ταξίδι ξεκινά<br>με <span class="hero-accent">ένα καλό πλάνο.</span></h1>
+    <p class="hero-subtitle" data-i18n-html="hero_subtitle">Σχεδίασε τη διαδρομή σου, υπολόγισε κόστος βενζίνης,<br>διόδια και βρες αξιοθέατα στην Ελλάδα.</p>
+    <button class="hero-cta" onclick="document.querySelector('.card').scrollIntoView({behavior:'smooth'})" data-i18n="hero_cta">Ξεκίνα τώρα →</button>
   </div>
 </section>
 
@@ -98,13 +100,13 @@
   <div class="card">
 
     <!-- Διαδρομή -->
-    <div class="form-section-title">Διαδρομή</div>
+    <div class="form-section-title" data-i18n="form_route">Διαδρομή</div>
     <div class="igc">
       <div class="igc-row">
         <span class="igc-icon">📍</span>
         <div class="igc-field">
-          <span class="igc-label">Από</span>
-          <input class="igc-input place-input" id="origin" type="text" placeholder="Πόλη εκκίνησης...">
+          <span class="igc-label" data-i18n="form_from">Από</span>
+          <input class="igc-input place-input" id="origin" type="text" placeholder="Πόλη εκκίνησης..." data-i18n-placeholder="from_ph">
           <div class="autocomplete-list"></div>
         </div>
       </div>
@@ -113,31 +115,31 @@
       <div class="igc-row">
         <span class="igc-icon">🏁</span>
         <div class="igc-field">
-          <span class="igc-label">Προς</span>
-          <input class="igc-input place-input" id="destination" type="text" placeholder="Τελικός προορισμός...">
+          <span class="igc-label" data-i18n="form_to">Προς</span>
+          <input class="igc-input place-input" id="destination" type="text" placeholder="Τελικός προορισμός..." data-i18n-placeholder="to_ph">
           <div class="autocomplete-list"></div>
         </div>
       </div>
     </div>
-    <button class="add-stop-btn" id="addStopBtn" type="button">
+    <button class="add-stop-btn" id="addStopBtn" type="button" data-i18n="form_add_stop">
       + Προσθήκη ενδιάμεσης στάσης
     </button>
 
     <!-- Ημερομηνίες -->
-    <div class="form-section-title" style="margin-top:20px;">Ημερομηνίες</div>
+    <div class="form-section-title" style="margin-top:20px;" data-i18n="form_dates">Ημερομηνίες</div>
     <div class="igc">
       <div class="igc-half">
         <div class="igc-row">
           <span class="igc-icon">📅</span>
           <div class="igc-field">
-            <span class="igc-label">Αναχώρηση</span>
+            <span class="igc-label" data-i18n="form_depart">Αναχώρηση</span>
             <input class="igc-input" type="date" id="dateFrom">
           </div>
         </div>
         <div class="igc-row">
           <span class="igc-icon">🗓️</span>
           <div class="igc-field">
-            <span class="igc-label">Επιστροφή</span>
+            <span class="igc-label" data-i18n="form_return">Επιστροφή</span>
             <input class="igc-input" type="date" id="dateTo">
           </div>
         </div>
@@ -145,26 +147,26 @@
     </div>
 
     <!-- Ρυθμίσεις -->
-    <div class="form-section-title" style="margin-top:20px;">Ρυθμίσεις</div>
+    <div class="form-section-title" style="margin-top:20px;" data-i18n="form_settings">Ρυθμίσεις</div>
     <div class="igc">
       <div class="igc-half">
         <div class="igc-row">
           <span class="igc-icon">🚗</span>
           <div class="igc-field">
-            <span class="igc-label">Τύπος οχήματος</span>
+            <span class="igc-label" data-i18n="form_vehicle">Τύπος οχήματος</span>
             <select class="igc-input" id="vehicleType">
-              <option value="1.0">Αυτοκίνητο</option>
-              <option value="0.5">Μοτοσυκλέτα</option>
-              <option value="1.4">Αυτοκίνητο με ρυμουλκό</option>
-              <option value="2.0">Φορτηγό</option>
+              <option value="1.0" data-i18n="v_car">Αυτοκίνητο</option>
+              <option value="0.5" data-i18n="v_moto">Μοτοσυκλέτα</option>
+              <option value="1.4" data-i18n="v_trailer">Αυτοκίνητο με ρυμουλκό</option>
+              <option value="2.0" data-i18n="v_truck">Φορτηγό</option>
             </select>
           </div>
         </div>
         <div class="igc-row">
           <span class="igc-icon">👥</span>
           <div class="igc-field">
-            <span class="igc-label">Άτομα</span>
-            <input class="igc-input" id="people" type="number" min="1" placeholder="π.χ. 2">
+            <span class="igc-label" data-i18n="form_people">Άτομα</span>
+            <input class="igc-input" id="people" type="number" min="1" placeholder="π.χ. 2" data-i18n-placeholder="people_ph">
           </div>
         </div>
       </div>
@@ -173,15 +175,15 @@
         <div class="igc-row">
           <span class="igc-icon">⛽</span>
           <div class="igc-field">
-            <span class="igc-label">Κατανάλωση (L/100km)</span>
-            <input class="igc-input" id="fuelConsumption" type="number" step="0.1" min="0" placeholder="π.χ. 7">
+            <span class="igc-label" data-i18n="form_fuel_cons">Κατανάλωση (L/100km)</span>
+            <input class="igc-input" id="fuelConsumption" type="number" step="0.1" min="0" placeholder="π.χ. 7" data-i18n-placeholder="fuel_cons_ph">
           </div>
         </div>
         <div class="igc-row">
           <span class="igc-icon">💰</span>
           <div class="igc-field">
-            <span class="igc-label">Τιμή βενζίνης (€/L)</span>
-            <input class="igc-input" id="fuelPrice" type="number" step="0.01" min="0" placeholder="π.χ. 1.95">
+            <span class="igc-label" data-i18n="form_fuel_price">Τιμή βενζίνης (€/L)</span>
+            <input class="igc-input" id="fuelPrice" type="number" step="0.01" min="0" placeholder="π.χ. 1.95" data-i18n-placeholder="fuel_price_ph">
           </div>
         </div>
       </div>
@@ -190,15 +192,15 @@
         <div class="igc-row">
           <span class="igc-icon">🍽️</span>
           <div class="igc-field">
-            <span class="igc-label">Φαγητό/άτομο/στάση (€)</span>
-            <input class="igc-input" id="foodPerStop" type="number" step="1" min="0" placeholder="π.χ. 12">
+            <span class="igc-label" data-i18n="form_food_lbl">Φαγητό/άτομο/στάση (€)</span>
+            <input class="igc-input" id="foodPerStop" type="number" step="1" min="0" placeholder="π.χ. 12" data-i18n-placeholder="food_ph">
           </div>
         </div>
         <div class="igc-row">
           <span class="igc-icon">🎟️</span>
           <div class="igc-field">
-            <span class="igc-label">Είσοδοι/άτομο/στάση (€)</span>
-            <input class="igc-input" id="entryPerStop" type="number" step="1" min="0" placeholder="π.χ. 5">
+            <span class="igc-label" data-i18n="form_entry_lbl">Είσοδοι/άτομο/στάση (€)</span>
+            <input class="igc-input" id="entryPerStop" type="number" step="1" min="0" placeholder="π.χ. 5" data-i18n-placeholder="entry_ph">
           </div>
         </div>
       </div>
@@ -206,15 +208,15 @@
       <div class="igc-row">
         <span class="igc-icon">📝</span>
         <div class="igc-field">
-          <span class="igc-label">Σημειώσεις</span>
-          <input class="igc-input" id="notes" type="text" placeholder="Προσωπικές σημειώσεις...">
+          <span class="igc-label" data-i18n="form_notes">Σημειώσεις</span>
+          <input class="igc-input" id="notes" type="text" placeholder="Προσωπικές σημειώσεις..." data-i18n-placeholder="notes_ph">
         </div>
       </div>
     </div>
 
     <div id="errorBox"></div>
 
-    <button class="search-btn" id="searchBtn" type="button">
+    <button class="search-btn" id="searchBtn" type="button" data-i18n="search_btn">
       🔍 Υπολογισμός Διαδρομής
     </button>
   </div>
@@ -233,7 +235,7 @@
     </div>
 
     <div style="margin-bottom:16px;">
-      <a id="mapsLink" href="#" target="_blank"
+      <a id="mapsLink" href="#" target="_blank" data-i18n="res_maps"
          style="font-size:0.88rem; color:var(--blue); font-weight:600; text-decoration:none;">
         🗺️ Άνοιγμα στο Google Maps ↗
       </a>
@@ -241,19 +243,19 @@
 
     <div class="sum-grid">
       <div class="sum-box">
-        <small>Απόσταση</small>
+        <small data-i18n="res_distance">Απόσταση</small>
         <strong id="sumDistance">–</strong>
       </div>
       <div class="sum-box">
-        <small>Χρόνος</small>
+        <small data-i18n="res_duration">Χρόνος</small>
         <strong id="sumDuration">–</strong>
       </div>
       <div class="sum-box">
-        <small>Στάσεις</small>
+        <small data-i18n="res_stops">Στάσεις</small>
         <strong id="sumStops">–</strong>
       </div>
       <div class="sum-box sum-box-total">
-        <small>Εκτιμώμενο συνολικό κόστος</small>
+        <small data-i18n="res_total_cost">Εκτιμώμενο συνολικό κόστος</small>
         <strong id="sumTotalCost">–</strong>
       </div>
     </div>
@@ -261,8 +263,8 @@
     <div class="leg-card toll-card" id="tollCard">
       <div class="leg-head" onclick="toggleTollCard()">
         <div>
-          <h3>🛣️ Διόδια</h3>
-          <p>Επίλεξε αυτοκινητόδρομους που θα περάσεις · <span id="tollSumInline">0.00€</span></p>
+          <h3 data-i18n="res_tolls_h">🛣️ Διόδια</h3>
+          <p><span data-i18n="res_tolls_sub">Επίλεξε αυτοκινητόδρομους που θα περάσεις · </span><span id="tollSumInline">0.00€</span></p>
         </div>
         <div id="tollCardIcon">▾</div>
       </div>
@@ -271,14 +273,14 @@
       </div>
     </div>
 
-    <div class="stops-title">Αναλυτικό Πλάνο</div>
+    <div class="stops-title" data-i18n="res_plan">Αναλυτικό Πλάνο</div>
     <div id="legs"></div>
 
     <div class="pdf-section">
-      <div class="pdf-note">
+      <div class="pdf-note" data-i18n="res_pdf_note">
         💡 Τα κόστη είναι εκτιμήσεις βάσει των επιλογών σου.
       </div>
-      <button class="pdf-btn" id="pdfBtn" type="button">
+      <button class="pdf-btn" id="pdfBtn" type="button" data-i18n="res_pdf_btn">
         📄 Αποθήκευση ως PDF
       </button>
     </div>
@@ -289,20 +291,20 @@
   <div id="guide" style="margin-top:64px; padding-top:56px; border-top:1px solid var(--border);">
 
     <div style="margin-bottom:28px;">
-      <div class="form-section-title">Οδηγός Προορισμού</div>
-      <h2 style="font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--navy);margin:6px 0 10px;letter-spacing:-0.5px;">Τι να κάνεις στον προορισμό σου</h2>
-      <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.7;max-width:540px;">Βάλε τον προορισμό, τις μέρες σου και τα ενδιαφέροντά σου. Σου φτιάχνουμε πρόγραμμα με αξιοθέατα, εστιατόρια και δραστηριότητες.</p>
+      <div class="form-section-title" data-i18n="guide_label">Οδηγός Προορισμού</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--navy);margin:6px 0 10px;letter-spacing:-0.5px;" data-i18n="guide_heading">Τι να κάνεις στον προορισμό σου</h2>
+      <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.7;max-width:540px;" data-i18n="guide_desc">Βάλε τον προορισμό, τις μέρες σου και τα ενδιαφέροντά σου. Σου φτιάχνουμε πρόγραμμα με αξιοθέατα, εστιατόρια και δραστηριότητες.</p>
     </div>
 
     <div class="card">
-      <div class="form-section-title">Πού θες να πας;</div>
+      <div class="form-section-title" data-i18n="guide_where">Πού θες να πας;</div>
 
       <div class="igc" style="margin-bottom:16px;">
         <div class="igc-row">
           <span class="igc-icon">📍</span>
           <div class="igc-field">
-            <span class="igc-label">Προορισμός</span>
-            <input class="igc-input place-input" id="guideDestination" type="text" placeholder="π.χ. Αθήνα, Θεσσαλονίκη, Ρόδος...">
+            <span class="igc-label" data-i18n="guide_dest">Προορισμός</span>
+            <input class="igc-input place-input" id="guideDestination" type="text" placeholder="π.χ. Αθήνα, Θεσσαλονίκη, Ρόδος..." data-i18n-placeholder="guide_dest_ph">
             <div class="autocomplete-list"></div>
           </div>
         </div>
@@ -313,55 +315,55 @@
           <div class="igc-row">
             <span class="igc-icon">📅</span>
             <div class="igc-field">
-              <span class="igc-label">Ημέρες παραμονής</span>
-              <input class="igc-input" id="guideDays" type="number" min="1" max="14" placeholder="π.χ. 3">
+              <span class="igc-label" data-i18n="guide_days">Ημέρες παραμονής</span>
+              <input class="igc-input" id="guideDays" type="number" min="1" max="14" placeholder="π.χ. 3" data-i18n-placeholder="guide_days_ph">
             </div>
           </div>
           <div class="igc-row">
             <span class="igc-icon">💰</span>
             <div class="igc-field">
-              <span class="igc-label">Προϋπολογισμός/μέρα</span>
+              <span class="igc-label" data-i18n="guide_budget">Προϋπολογισμός/μέρα</span>
               <select class="igc-input" id="guideBudget">
-                <option value="budget">€ Οικονομικό</option>
-                <option value="mid" selected>€€ Μεσαίο</option>
-                <option value="luxury">€€€ Premium</option>
+                <option value="budget" data-i18n="guide_budget_eco">€ Οικονομικό</option>
+                <option value="mid" selected data-i18n="guide_budget_mid">€€ Μεσαίο</option>
+                <option value="luxury" data-i18n="guide_budget_lux">€€€ Premium</option>
               </select>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="form-section-title">Ενδιαφέροντα</div>
+      <div class="form-section-title" data-i18n="guide_interests">Ενδιαφέροντα</div>
       <div class="interest-pills">
         <label class="interest-pill">
           <input type="checkbox" value="catering.restaurant,catering.cafe" name="interest" checked>
-          <span>🍽️ Φαγητό</span>
+          <span data-i18n="p_food">🍽️ Φαγητό</span>
         </label>
         <label class="interest-pill">
           <input type="checkbox" value="tourism.attraction,tourism.sights,entertainment.museum" name="interest" checked>
-          <span>🏛️ Αξιοθέατα</span>
+          <span data-i18n="p_sights">🏛️ Αξιοθέατα</span>
         </label>
         <label class="interest-pill">
           <input type="checkbox" value="leisure.park,natural" name="interest">
-          <span>🌿 Φύση</span>
+          <span data-i18n="p_nature">🌿 Φύση</span>
         </label>
         <label class="interest-pill">
           <input type="checkbox" value="entertainment.nightclub,catering.bar" name="interest">
-          <span>🎉 Νυχτερινή ζωή</span>
+          <span data-i18n="p_night">🎉 Νυχτερινή ζωή</span>
         </label>
         <label class="interest-pill">
           <input type="checkbox" value="commercial.shopping_mall,commercial" name="interest">
-          <span>🛍️ Ψώνια</span>
+          <span data-i18n="p_shop">🛍️ Ψώνια</span>
         </label>
         <label class="interest-pill">
           <input type="checkbox" value="leisure.beach_resort,natural.water" name="interest">
-          <span>🏖️ Παραλία</span>
+          <span data-i18n="p_beach">🏖️ Παραλία</span>
         </label>
       </div>
 
       <div id="guideErrorBox"></div>
 
-      <button class="search-btn" id="guideSearchBtn" type="button" style="margin-top:20px;">
+      <button class="search-btn" id="guideSearchBtn" type="button" style="margin-top:20px;" data-i18n="guide_btn">
         🗺️ Δημιουργία Προγράμματος
       </button>
     </div>
@@ -375,8 +377,8 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p>© 2025 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.</p>
-    <p><a href="privacy.html">Πολιτική Απορρήτου</a></p>
+    <p data-i18n="footer_copy">© 2025 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.</p>
+    <p><a href="privacy.html" data-i18n="footer_privacy">Πολιτική Απορρήτου</a></p>
   </footer>
 
 </div>

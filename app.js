@@ -1,5 +1,158 @@
 const GEOAPIFY_KEY = "REPLACE_WITH_YOUR_KEY";;
 
+// ─── I18N ────────────────────────────────────────────────────────────────────
+
+let currentLang = (() => { try { return localStorage.getItem('lang') || 'el'; } catch { return 'el'; } })();
+
+const T = {
+  el: {
+    nav_home:'Αρχή', nav_planner:'Πλάνο Διαδρομής', nav_guide:'Οδηγός Προορισμού',
+    nav_privacy:'Απόρρητο', nav_cta:'Ξεκίνα →',
+    hero_badge:'ΔΩΡΕΑΝ ΕΡΓΑΛΕΙΟ ΤΑΞΙΔΙΟΥ ΣΤΗΝ ΕΛΛΑΔΑ',
+    hero_title:'Κάθε ταξίδι ξεκινά<br>με <span class="hero-accent">ένα καλό πλάνο.</span>',
+    hero_subtitle:'Σχεδίασε τη διαδρομή σου, υπολόγισε κόστος βενζίνης,<br>διόδια και βρες αξιοθέατα στην Ελλάδα.',
+    hero_cta:'Ξεκίνα τώρα →',
+    form_route:'Διαδρομή', form_from:'Από', from_ph:'Πόλη εκκίνησης...',
+    form_to:'Προς', to_ph:'Τελικός προορισμός...', form_add_stop:'+ Προσθήκη ενδιάμεσης στάσης',
+    form_dates:'Ημερομηνίες', form_depart:'Αναχώρηση', form_return:'Επιστροφή',
+    form_settings:'Ρυθμίσεις', form_vehicle:'Τύπος οχήματος',
+    form_people:'Άτομα', people_ph:'π.χ. 2',
+    form_fuel_cons:'Κατανάλωση (L/100km)', fuel_cons_ph:'π.χ. 7',
+    form_fuel_price:'Τιμή βενζίνης (€/L)', fuel_price_ph:'π.χ. 1.95',
+    form_food_lbl:'Φαγητό/άτομο/στάση (€)', food_ph:'π.χ. 12',
+    form_entry_lbl:'Είσοδοι/άτομο/στάση (€)', entry_ph:'π.χ. 5',
+    form_notes:'Σημειώσεις', notes_ph:'Προσωπικές σημειώσεις...',
+    v_car:'Αυτοκίνητο', v_moto:'Μοτοσυκλέτα', v_trailer:'Αυτοκίνητο με ρυμουλκό', v_truck:'Φορτηγό',
+    search_btn:'🔍 Υπολογισμός Διαδρομής',
+    res_maps:'🗺️ Άνοιγμα στο Google Maps ↗',
+    res_distance:'Απόσταση', res_duration:'Χρόνος', res_stops:'Στάσεις',
+    res_total_cost:'Εκτιμώμενο συνολικό κόστος',
+    res_tolls_h:'🛣️ Διόδια', res_tolls_sub:'Επίλεξε αυτοκινητόδρομους που θα περάσεις · ',
+    res_plan:'Αναλυτικό Πλάνο',
+    res_pdf_note:'💡 Τα κόστη είναι εκτιμήσεις βάσει των επιλογών σου.',
+    res_pdf_btn:'📄 Αποθήκευση ως PDF',
+    leg_origin:'Αφετηρία', leg_origin_desc:'Σημείο εκκίνησης του ταξιδιού σου.',
+    leg_start:'Έναρξη ταξιδιού', leg_weather:'Καιρός', leg_sights:'Αξιοθέατα',
+    leg_food:'Φαγητό', leg_arrival:'Άφιξη',
+    leg_person:'άτομο', leg_people:'άτομα',
+    guide_label:'Οδηγός Προορισμού', guide_heading:'Τι να κάνεις στον προορισμό σου',
+    guide_desc:'Βάλε τον προορισμό, τις μέρες σου και τα ενδιαφέροντά σου. Σου φτιάχνουμε πρόγραμμα με αξιοθέατα, εστιατόρια και δραστηριότητες.',
+    guide_where:'Πού θες να πας;', guide_dest:'Προορισμός',
+    guide_dest_ph:'π.χ. Αθήνα, Θεσσαλονίκη, Ρόδος...',
+    guide_days:'Ημέρες παραμονής', guide_days_ph:'π.χ. 3',
+    guide_budget:'Προϋπολογισμός/μέρα',
+    guide_budget_eco:'€ Οικονομικό', guide_budget_mid:'€€ Μεσαίο', guide_budget_lux:'€€€ Premium',
+    guide_interests:'Ενδιαφέροντα',
+    p_food:'🍽️ Φαγητό', p_sights:'🏛️ Αξιοθέατα', p_nature:'🌿 Φύση',
+    p_night:'🎉 Νυχτερινή ζωή', p_shop:'🛍️ Ψώνια', p_beach:'🏖️ Παραλία',
+    guide_btn:'🗺️ Δημιουργία Προγράμματος',
+    guide_day:'Ημέρα', guide_places:'τοποθεσίες',
+    guide_no_res:'Δεν βρέθηκαν τοποθεσίες για τα επιλεγμένα ενδιαφέροντα. Δοκίμασε διαφορετικά ενδιαφέροντα ή άλλον προορισμό.',
+    loading:'Υπολογισμός διαδρομής...',
+    footer_copy:'© 2025 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.',
+    footer_privacy:'Πολιτική Απορρήτου',
+    w_clear:'Αίθριος καιρός', w_few_clouds:'Λίγα σύννεφα', w_cloudy:'Συννεφιά',
+    w_fog:'Ομίχλη', w_drizzle:'Ψιλόβροχο', w_rain:'Βροχή', w_snow:'Χιόνι',
+    w_showers:'Ντους βροχής', w_sleet:'Χιονόνερο', w_storm:'Καταιγίδα',
+    err_no_key:'Δεν έχει οριστεί Geoapify API key. Βάλε το key σου στη μεταβλητή GEOAPIFY_KEY στο app.js.',
+    err_fill_route:'Συμπλήρωσε αφετηρία και προορισμό.',
+    err_missing_fields:'Λείπουν βασικά πεδία της φόρμας.',
+    err_fill_dest:'Συμπλήρωσε τον προορισμό.',
+    err_select_interest:'Επίλεξε τουλάχιστον ένα ενδιαφέρον.',
+    err_general:'Κάτι πήγε στραβά στον υπολογισμό της διαδρομής.',
+    err_guide:'Σφάλμα κατά την αναζήτηση.',
+    no_location:'Δεν βρέθηκε τοποθεσία στην Ελλάδα για',
+    no_route:'Δεν βρέθηκε διαδρομή.',
+    empty_field:'Υπάρχει κενό πεδίο στη διαδρομή.',
+  },
+  en: {
+    nav_home:'Home', nav_planner:'Route Planner', nav_guide:'Destination Guide',
+    nav_privacy:'Privacy', nav_cta:'Start →',
+    hero_badge:'FREE TRAVEL TOOL FOR GREECE',
+    hero_title:'Every trip starts<br>with <span class="hero-accent">a great plan.</span>',
+    hero_subtitle:'Plan your route, calculate fuel costs,<br>tolls and discover attractions in Greece.',
+    hero_cta:'Start now →',
+    form_route:'Route', form_from:'From', from_ph:'Starting city...',
+    form_to:'To', to_ph:'Final destination...', form_add_stop:'+ Add a stop',
+    form_dates:'Dates', form_depart:'Departure', form_return:'Return',
+    form_settings:'Settings', form_vehicle:'Vehicle type',
+    form_people:'People', people_ph:'e.g. 2',
+    form_fuel_cons:'Consumption (L/100km)', fuel_cons_ph:'e.g. 7',
+    form_fuel_price:'Fuel price (€/L)', fuel_price_ph:'e.g. 1.95',
+    form_food_lbl:'Food/person/stop (€)', food_ph:'e.g. 12',
+    form_entry_lbl:'Entries/person/stop (€)', entry_ph:'e.g. 5',
+    form_notes:'Notes', notes_ph:'Personal notes...',
+    v_car:'Car', v_moto:'Motorcycle', v_trailer:'Car with trailer', v_truck:'Truck',
+    search_btn:'🔍 Calculate Route',
+    res_maps:'🗺️ Open in Google Maps ↗',
+    res_distance:'Distance', res_duration:'Duration', res_stops:'Stops',
+    res_total_cost:'Estimated total cost',
+    res_tolls_h:'🛣️ Tolls', res_tolls_sub:'Select highways you will pass through · ',
+    res_plan:'Detailed Plan',
+    res_pdf_note:'💡 Costs are estimates based on your settings.',
+    res_pdf_btn:'📄 Save as PDF',
+    leg_origin:'Origin', leg_origin_desc:'Your trip starting point.',
+    leg_start:'Journey start', leg_weather:'Weather', leg_sights:'Sights',
+    leg_food:'Food', leg_arrival:'Arrival',
+    leg_person:'person', leg_people:'people',
+    guide_label:'Destination Guide', guide_heading:'What to do at your destination',
+    guide_desc:'Enter your destination, days and interests. We\'ll create an itinerary with attractions, restaurants and activities.',
+    guide_where:'Where do you want to go?', guide_dest:'Destination',
+    guide_dest_ph:'e.g. Athens, Thessaloniki, Rhodes...',
+    guide_days:'Days of stay', guide_days_ph:'e.g. 3',
+    guide_budget:'Budget/day',
+    guide_budget_eco:'€ Budget', guide_budget_mid:'€€ Mid-range', guide_budget_lux:'€€€ Premium',
+    guide_interests:'Interests',
+    p_food:'🍽️ Food', p_sights:'🏛️ Sights', p_nature:'🌿 Nature',
+    p_night:'🎉 Nightlife', p_shop:'🛍️ Shopping', p_beach:'🏖️ Beach',
+    guide_btn:'🗺️ Create Itinerary',
+    guide_day:'Day', guide_places:'places',
+    guide_no_res:'No places found for the selected interests. Try different interests or another destination.',
+    loading:'Calculating route...',
+    footer_copy:'© 2025 Travel Planner Greece · Toll data are estimates based on official price lists.',
+    footer_privacy:'Privacy Policy',
+    w_clear:'Clear sky', w_few_clouds:'Few clouds', w_cloudy:'Overcast',
+    w_fog:'Foggy', w_drizzle:'Drizzle', w_rain:'Rain', w_snow:'Snow',
+    w_showers:'Rain showers', w_sleet:'Sleet', w_storm:'Thunderstorm',
+    err_no_key:'No Geoapify API key set. Add your key to the GEOAPIFY_KEY variable in app.js.',
+    err_fill_route:'Please enter origin and destination.',
+    err_missing_fields:'Missing required form fields.',
+    err_fill_dest:'Please enter a destination.',
+    err_select_interest:'Please select at least one interest.',
+    err_general:'Something went wrong calculating the route.',
+    err_guide:'Error during search.',
+    no_location:'No location found in Greece for',
+    no_route:'No route found.',
+    empty_field:'A route field is empty.',
+  }
+};
+
+function t(key) { return T[currentLang]?.[key] ?? T.el[key] ?? key; }
+
+function applyLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = T[lang]?.[el.dataset.i18n] ?? T.el[el.dataset.i18n];
+    if (v !== undefined) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const v = T[lang]?.[el.dataset.i18nHtml] ?? T.el[el.dataset.i18nHtml];
+    if (v !== undefined) el.innerHTML = v;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const v = T[lang]?.[el.dataset.i18nPlaceholder] ?? T.el[el.dataset.i18nPlaceholder];
+    if (v !== undefined) el.placeholder = v;
+  });
+  const btn = qs('langBtn');
+  if (btn) btn.textContent = lang === 'el' ? 'EN' : 'ΕΛ';
+  document.documentElement.lang = lang;
+  try { localStorage.setItem('lang', lang); } catch {}
+}
+
+window.toggleLang = function() { applyLang(currentLang === 'el' ? 'en' : 'el'); };
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const state = { stopIndex: 0 };
 
 const VEHICLE_LABELS = { "0.5": "Μοτοσυκλέτα", "1.0": "Αυτοκίνητο", "1.4": "Αυτοκίνητο με ρυμουλκό", "2.0": "Φορτηγό" };
@@ -274,7 +427,7 @@ async function getWeather(lat, lon, date) {
   } catch { return null; }
 }
 function weatherIcon(c) { if(c===0)return"☀️"; if(c<=2)return"🌤️"; if(c<=3)return"☁️"; if(c<=48)return"🌫️"; if(c<=57)return"🌦️"; if(c<=67)return"🌧️"; if(c<=77)return"❄️"; if(c<=82)return"🌧️"; if(c<=86)return"🌨️"; return"⛈️"; }
-function weatherDescription(c) { if(c===0)return"Αίθριος καιρός"; if(c<=2)return"Λίγα σύννεφα"; if(c<=3)return"Συννεφιά"; if(c<=48)return"Ομίχλη"; if(c<=57)return"Ψιλόβροχο"; if(c<=67)return"Βροχή"; if(c<=77)return"Χιόνι"; if(c<=82)return"Ντους βροχής"; if(c<=86)return"Χιονόνερο"; return"Καταιγίδα"; }
+function weatherDescription(c) { if(c===0)return t('w_clear'); if(c<=2)return t('w_few_clouds'); if(c<=3)return t('w_cloudy'); if(c<=48)return t('w_fog'); if(c<=57)return t('w_drizzle'); if(c<=67)return t('w_rain'); if(c<=77)return t('w_snow'); if(c<=82)return t('w_showers'); if(c<=86)return t('w_sleet'); return t('w_storm'); }
 
 async function searchCitySuggestions(text) {
   const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=5&apiKey=${GEOAPIFY_KEY}`;
@@ -284,14 +437,14 @@ async function searchCitySuggestions(text) {
 async function geocodePlace(text) {
   const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=1&apiKey=${GEOAPIFY_KEY}`;
   const data = await apiJson(url);
-  if (!data.results?.length) throw new Error(`Δεν βρέθηκε τοποθεσία στην Ελλάδα για: ${text}`);
+  if (!data.results?.length) throw new Error(`${t('no_location')}: ${text}`);
   const item = data.results[0];
   return { name: item.city||item.town||item.village||item.suburb||item.name||text, label: item.formatted||item.address_line1||text, lat: item.lat, lon: item.lon };
 }
 
 async function resolvePlaceFromInput(input) {
   const value = input.value.trim();
-  if (!value) throw new Error("Υπάρχει κενό πεδίο στη διαδρομή.");
+  if (!value) throw new Error(t('empty_field'));
   const { label, lat, lon, name } = input.dataset;
   if (label && lat && lon && value === label) return { name: name||value, label, lat: Number(lat), lon: Number(lon) };
   return geocodePlace(value);
@@ -301,7 +454,7 @@ async function getRoute(places) {
   const waypoints = places.map(p=>`${p.lat},${p.lon}`).join("|");
   const url = `https://api.geoapify.com/v1/routing?waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=el&apiKey=${GEOAPIFY_KEY}`;
   const data = await apiJson(url);
-  if (!data.results?.length) throw new Error("Δεν βρέθηκε διαδρομή.");
+  if (!data.results?.length) throw new Error(t('no_route'));
   return data.results[0];
 }
 
@@ -361,7 +514,7 @@ async function renderResults({ places, route, settings, tripInfo }) {
   if (qs("routeTitle")) qs("routeTitle").textContent = `${places[0].name} → ${places[places.length-1].name}`;
   const dateLabel = tripInfo.dateFrom ? `${formatDate(tripInfo.dateFrom)}${tripInfo.dateTo?" – "+formatDate(tripInfo.dateTo):""}` : "Χωρίς ημερομηνίες";
   if (qs("metaDates")) qs("metaDates").textContent = dateLabel;
-  if (qs("metaPeople")) qs("metaPeople").textContent = `${settings.people} άτομο${settings.people>1?"α":""}`;
+  if (qs("metaPeople")) qs("metaPeople").textContent = `${settings.people} ${settings.people>1?t('leg_people'):t('leg_person')}`;
   if (qs("metaVehicle")) qs("metaVehicle").textContent = VEHICLE_LABELS[vehicleKey]||"Αυτοκίνητο";
   if (qs("metaVehicleIcon")) qs("metaVehicleIcon").textContent = VEHICLE_ICONS[vehicleKey]||"🚗";
   if (qs("metaNotes")) qs("metaNotes").textContent = tripInfo.notes ? `Σημειώσεις: ${tripInfo.notes.slice(0,40)}${tripInfo.notes.length>40?"...":""}` : "Χωρίς σημειώσεις";
@@ -382,7 +535,7 @@ async function renderResults({ places, route, settings, tripInfo }) {
 
   const originCard = document.createElement("div");
   originCard.className = "leg-card";
-  originCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>Αφετηρία: ${escapeHtml(places[0].name)}</h3><p>Σημείο εκκίνησης του ταξιδιού σου.</p></div><div>▾</div></div><div class="leg-body"><div class="place-list"><div class="place-item"><strong>Έναρξη ταξιδιού</strong><div class="muted">${escapeHtml(places[0].label||places[0].name)}</div></div></div></div>`;
+  originCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${t('leg_origin')}: ${escapeHtml(places[0].name)}</h3><p>${t('leg_origin_desc')}</p></div><div>▾</div></div><div class="leg-body"><div class="place-list"><div class="place-item"><strong>${t('leg_start')}</strong><div class="muted">${escapeHtml(places[0].label||places[0].name)}</div></div></div></div>`;
   legsContainer.appendChild(originCard);
 
   const weatherDate = tripInfo.dateFrom || todayIso();
@@ -401,7 +554,7 @@ async function renderResults({ places, route, settings, tripInfo }) {
 
     let weatherHtml = "";
     if (weather) {
-      weatherHtml = `<div class="place-item weather-item"><strong>Καιρός ${formatDate(weatherDate)}</strong><div class="weather-details"><span class="weather-icon">${weatherIcon(weather.code)}</span><span class="weather-desc">${weatherDescription(weather.code)}</span><span class="weather-temp"><span class="temp-max">↑${weather.maxTemp}°</span><span class="temp-min">↓${weather.minTemp}°</span></span>${weather.precipitation>0?`<span class="weather-rain">🌧 ${weather.precipitation.toFixed(1)}mm</span>`:""}</div></div>`;
+      weatherHtml = `<div class="place-item weather-item"><strong>${t('leg_weather')} ${formatDate(weatherDate)}</strong><div class="weather-details"><span class="weather-icon">${weatherIcon(weather.code)}</span><span class="weather-desc">${weatherDescription(weather.code)}</span><span class="weather-temp"><span class="temp-max">↑${weather.maxTemp}°</span><span class="temp-min">↓${weather.minTemp}°</span></span>${weather.precipitation>0?`<span class="weather-rain">🌧 ${weather.precipitation.toFixed(1)}mm</span>`:""}</div></div>`;
     }
 
     const card = document.createElement("div");
@@ -419,9 +572,9 @@ async function renderResults({ places, route, settings, tripInfo }) {
         </div>
         <div class="place-list">
           ${weatherHtml}
-          <div class="place-item"><strong>Αξιοθέατα</strong><div class="muted">${poi.sights.map(x=>`${escapeHtml(x.name)} — ${escapeHtml(x.desc)}`).join("<br>")}</div></div>
-          <div class="place-item"><strong>Φαγητό</strong><div class="muted">${poi.food.map(x=>`${escapeHtml(x.name)} — ${escapeHtml(x.desc)}`).join("<br>")}</div></div>
-          <div class="place-item"><strong>Άφιξη</strong><div class="muted">${escapeHtml(toPlace.label||toPlace.name)}</div></div>
+          <div class="place-item"><strong>${t('leg_sights')}</strong><div class="muted">${poi.sights.map(x=>`${escapeHtml(x.name)} — ${escapeHtml(x.desc)}`).join("<br>")}</div></div>
+          <div class="place-item"><strong>${t('leg_food')}</strong><div class="muted">${poi.food.map(x=>`${escapeHtml(x.name)} — ${escapeHtml(x.desc)}`).join("<br>")}</div></div>
+          <div class="place-item"><strong>${t('leg_arrival')}</strong><div class="muted">${escapeHtml(toPlace.label||toPlace.name)}</div></div>
         </div>
       </div>`;
     legsContainer.appendChild(card);
@@ -432,10 +585,10 @@ async function renderResults({ places, route, settings, tripInfo }) {
 
 async function handleSearch() {
   clearError();
-  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes("ΒΑΛΕ_ΕΔΩ") || GEOAPIFY_KEY.includes("REPLACE")) { showError("Βάλε πρώτα το Geoapify API key σου στη μεταβλητή GEOAPIFY_KEY στο app.js."); return; }
+  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes("ΒΑΛΕ_ΕΔΩ") || GEOAPIFY_KEY.includes("REPLACE")) { showError(t('err_no_key')); return; }
   const { originInput, destinationInput, stopInputs } = collectRouteInputs();
-  if (!originInput || !destinationInput) { showError("Λείπουν βασικά πεδία της φόρμας."); return; }
-  if (!originInput.value.trim() || !destinationInput.value.trim()) { showError("Συμπλήρωσε αφετηρία και προορισμό."); return; }
+  if (!originInput || !destinationInput) { showError(t('err_missing_fields')); return; }
+  if (!originInput.value.trim() || !destinationInput.value.trim()) { showError(t('err_fill_route')); return; }
 
   const vehicleMultiplier = Number(qs("vehicleType")?.value || 1.0);
   const settings = {
@@ -458,7 +611,7 @@ async function handleSearch() {
     await renderResults({ places, route, settings, tripInfo });
   } catch (err) {
     console.error(err);
-    showError(err.message || "Κάτι πήγε στραβά στον υπολογισμό της διαδρομής.");
+    showError(err.message || t('err_general'));
   } finally { showLoader(false); }
 }
 
@@ -513,15 +666,12 @@ async function handleGuideSearch() {
   const clearErr = () => { if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; } };
   clearErr();
 
-  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes('REPLACE')) {
-    showErr('Δεν έχει οριστεί Geoapify API key. Άνοιξε το app.js και βάλε το key σου στη μεταβλητή GEOAPIFY_KEY.');
-    return;
-  }
-  if (!destInput?.value.trim()) { showErr('Συμπλήρωσε τον προορισμό.'); return; }
+  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes('REPLACE')) { showErr(t('err_no_key')); return; }
+  if (!destInput?.value.trim()) { showErr(t('err_fill_dest')); return; }
 
   const days = Math.min(14, Math.max(1, parseInt(daysInput?.value) || 3));
   const interests = Array.from(document.querySelectorAll('input[name="interest"]:checked')).map(cb => cb.value);
-  if (!interests.length) { showErr('Επίλεξε τουλάχιστον ένα ενδιαφέρον.'); return; }
+  if (!interests.length) { showErr(t('err_select_interest')); return; }
 
   try {
     showLoader(true);
@@ -553,7 +703,7 @@ async function handleGuideSearch() {
     renderGuideResults(place.name, dayPlans);
   } catch (err) {
     console.error(err);
-    if (errBox) { errBox.textContent = err.message || 'Σφάλμα κατά την αναζήτηση.'; errBox.style.display = 'block'; }
+    if (errBox) { errBox.textContent = err.message || t('err_guide'); errBox.style.display = 'block'; }
   } finally {
     showLoader(false);
   }
@@ -569,7 +719,7 @@ function renderGuideResults(cityName, dayPlans) {
   cardsEl.innerHTML = '';
 
   if (!dayPlans.length) {
-    cardsEl.innerHTML = '<p style="color:var(--text-muted);padding:16px 0;">Δεν βρέθηκαν τοποθεσίες για τα επιλεγμένα ενδιαφέροντα. Δοκίμασε διαφορετικά ενδιαφέροντα ή άλλον προορισμό.</p>';
+    cardsEl.innerHTML = `<p style="color:var(--text-muted);padding:16px 0;">${t('guide_no_res')}</p>`;
     resultsEl.style.display = 'block';
     resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
@@ -580,8 +730,8 @@ function renderGuideResults(cityName, dayPlans) {
     card.className = 'guide-day-card';
     card.innerHTML = `
       <div class="guide-day-head">
-        <h3>Ημέρα ${i + 1}</h3>
-        <span class="guide-day-count">${places.length} τοποθεσίες</span>
+        <h3>${t('guide_day')} ${i + 1}</h3>
+        <span class="guide-day-count">${places.length} ${t('guide_places')}</span>
       </div>
       <div class="guide-day-body">
         ${places.map(p => `
@@ -613,7 +763,10 @@ function initApp() {
   if (searchBtn) searchBtn.addEventListener("click", handleSearch);
   const guideSearchBtn = qs("guideSearchBtn");
   if (guideSearchBtn) guideSearchBtn.addEventListener("click", handleGuideSearch);
+  const langBtn = qs("langBtn");
+  if (langBtn) langBtn.addEventListener("click", toggleLang);
   initBaseAutocomplete();
+  applyLang(currentLang);
   ["origin","destination"].forEach(id => { const el = qs(id); if (el) { el.value = ""; el.dataset.name = el.dataset.label = el.dataset.lat = el.dataset.lon = ""; } });
   const sc = qs("stopsContainer"); if (sc) sc.innerHTML = "";
   if (qs("results")) qs("results").style.display = "none";
