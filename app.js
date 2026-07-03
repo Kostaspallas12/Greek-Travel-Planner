@@ -437,7 +437,7 @@ async function geocodePlace(text) {
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(`${t('no_location')}: ${text}`);
   const item = data.results[0];
-  return { name: item.city||item.town||item.village||item.suburb||item.name||text, label: item.formatted||item.address_line1||text, lat: item.lat, lon: item.lon };
+  return { name: item.city||item.town||item.village||item.suburb||item.name||item.other_names?.name||item.state||text, label: item.formatted||item.address_line1||text, lat: item.lat, lon: item.lon };
 }
 
 async function resolvePlaceFromInput(input) {
@@ -448,9 +448,10 @@ async function resolvePlaceFromInput(input) {
   return geocodePlace(value);
 }
 
-async function getRoute(places) {
+async function getRoute(places, { avoidFerries = false } = {}) {
   const waypoints = places.map(p=>`${p.lat},${p.lon}`).join("|");
-  const url = `${GEOAPIFY_PROXY}?endpoint=routing&waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=el`;
+  const avoidParam = avoidFerries ? "&avoid=ferries" : "";
+  const url = `${GEOAPIFY_PROXY}?endpoint=routing&waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=el${avoidParam}`;
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(t('no_route'));
   return data.results[0];
@@ -467,7 +468,7 @@ function createAutocomplete(input) {
       const suggestions = await searchCitySuggestions(q);
       if (!suggestions.length) { list.style.display = "none"; list.innerHTML = ""; return; }
       list.innerHTML = suggestions.map(item => {
-        const main = item.city||item.town||item.village||item.suburb||item.name||item.formatted||q;
+        const main = item.city||item.town||item.village||item.suburb||item.name||item.other_names?.name||item.formatted||q;
         const sub = item.formatted||"";
         return `<div class="autocomplete-item" data-name="${escapeHtml(main)}" data-label="${escapeHtml(sub||main)}" data-lat="${item.lat}" data-lon="${item.lon}"><div class="autocomplete-main">${escapeHtml(main)}</div><div class="autocomplete-sub">${escapeHtml(sub)}</div></div>`;
       }).join("");
@@ -604,7 +605,9 @@ async function handleSearch() {
     places.push(await resolvePlaceFromInput(originInput));
     for (const input of stopInputs) { if (input.value.trim()) places.push(await resolvePlaceFromInput(input)); }
     places.push(await resolvePlaceFromInput(destinationInput));
-    const route = await getRoute(places);
+    // avoid=ferries: η εφαρμογή υπολογίζει ΜΟΝΟ διαδρομές με αυτοκίνητο. Αν ο προορισμός
+    // απαιτεί πλοίο, δεν υπάρχει καθαρά οδική διαδρομή και το routing αποτυγχάνει κανονικά.
+    const route = await getRoute(places, { avoidFerries: true });
     await renderResults({ places, route, settings, tripInfo });
   } catch (err) {
     console.error(err);
