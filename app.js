@@ -1,4 +1,4 @@
-const GEOAPIFY_KEY = "e578e69a7296426aa62ef94325b9379";
+const GEOAPIFY_PROXY = "/.netlify/functions/geoapify";
 
 // ─── I18N ────────────────────────────────────────────────────────────────────
 
@@ -54,7 +54,6 @@ const T = {
     w_clear:'Αίθριος καιρός', w_few_clouds:'Λίγα σύννεφα', w_cloudy:'Συννεφιά',
     w_fog:'Ομίχλη', w_drizzle:'Ψιλόβροχο', w_rain:'Βροχή', w_snow:'Χιόνι',
     w_showers:'Ντους βροχής', w_sleet:'Χιονόνερο', w_storm:'Καταιγίδα',
-    err_no_key:'Δεν έχει οριστεί Geoapify API key. Βάλε το key σου στη μεταβλητή GEOAPIFY_KEY στο app.js.',
     err_fill_route:'Συμπλήρωσε αφετηρία και προορισμό.',
     err_missing_fields:'Λείπουν βασικά πεδία της φόρμας.',
     err_fill_dest:'Συμπλήρωσε τον προορισμό.',
@@ -114,7 +113,6 @@ const T = {
     w_clear:'Clear sky', w_few_clouds:'Few clouds', w_cloudy:'Overcast',
     w_fog:'Foggy', w_drizzle:'Drizzle', w_rain:'Rain', w_snow:'Snow',
     w_showers:'Rain showers', w_sleet:'Sleet', w_storm:'Thunderstorm',
-    err_no_key:'No Geoapify API key set. Add your key to the GEOAPIFY_KEY variable in app.js.',
     err_fill_route:'Please enter origin and destination.',
     err_missing_fields:'Missing required form fields.',
     err_fill_dest:'Please enter a destination.',
@@ -430,12 +428,12 @@ function weatherIcon(c) { if(c===0)return"☀️"; if(c<=2)return"🌤️"; if(c
 function weatherDescription(c) { if(c===0)return t('w_clear'); if(c<=2)return t('w_few_clouds'); if(c<=3)return t('w_cloudy'); if(c<=48)return t('w_fog'); if(c<=57)return t('w_drizzle'); if(c<=67)return t('w_rain'); if(c<=77)return t('w_snow'); if(c<=82)return t('w_showers'); if(c<=86)return t('w_sleet'); return t('w_storm'); }
 
 async function searchCitySuggestions(text) {
-  const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=5&apiKey=${GEOAPIFY_KEY}`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=autocomplete&text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=5`;
   return (await apiJson(url)).results || [];
 }
 
 async function geocodePlace(text) {
-  const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=1&apiKey=${GEOAPIFY_KEY}`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=search&text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=1`;
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(`${t('no_location')}: ${text}`);
   const item = data.results[0];
@@ -452,7 +450,7 @@ async function resolvePlaceFromInput(input) {
 
 async function getRoute(places) {
   const waypoints = places.map(p=>`${p.lat},${p.lon}`).join("|");
-  const url = `https://api.geoapify.com/v1/routing?waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=el&apiKey=${GEOAPIFY_KEY}`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=routing&waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=el`;
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(t('no_route'));
   return data.results[0];
@@ -585,7 +583,6 @@ async function renderResults({ places, route, settings, tripInfo }) {
 
 async function handleSearch() {
   clearError();
-  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes("ΒΑΛΕ_ΕΔΩ") || GEOAPIFY_KEY.includes("REPLACE")) { showError(t('err_no_key')); return; }
   const { originInput, destinationInput, stopInputs } = collectRouteInputs();
   if (!originInput || !destinationInput) { showError(t('err_missing_fields')); return; }
   if (!originInput.value.trim() || !destinationInput.value.trim()) { showError(t('err_fill_route')); return; }
@@ -647,7 +644,7 @@ function guideCatLabel(cat) {
 }
 
 async function fetchGuidePlaces(lat, lon, cats, limit) {
-  const url = `https://api.geoapify.com/v2/places?categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&limit=${limit}&apiKey=${GEOAPIFY_KEY}`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=places&categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&limit=${limit}`;
   try {
     const data = await apiJson(url);
     return (data.features || []).map(f => ({
@@ -666,7 +663,6 @@ async function handleGuideSearch() {
   const clearErr = () => { if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; } };
   clearErr();
 
-  if (!GEOAPIFY_KEY || GEOAPIFY_KEY.includes('REPLACE')) { showErr(t('err_no_key')); return; }
   if (!destInput?.value.trim()) { showErr(t('err_fill_dest')); return; }
 
   const days = Math.min(14, Math.max(1, parseInt(daysInput?.value) || 3));
