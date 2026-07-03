@@ -1,4 +1,4 @@
-const GEOAPIFY_KEY = "REPLACE_WITH_YOUR_KEY";;
+const GEOAPIFY_KEY = "e578e69a7296426aa62ef94325b9379";
 
 // ─── I18N ────────────────────────────────────────────────────────────────────
 
