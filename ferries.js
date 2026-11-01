@@ -17,6 +17,10 @@ const ISLANDS = {
   skopelos: [39.07, 39.2, 23.6, 23.75], alonissos: [39.1, 39.27, 23.83, 24.0], skyros: [38.77, 38.97, 24.4, 24.65],
   corfu: [39.35, 39.85, 19.62, 20.13], paxi: [39.18, 39.25, 20.1, 20.25], ithaca: [38.27, 38.48, 20.63, 20.77],
   kefalonia: [38.03, 38.5, 20.33, 20.82], zakynthos: [37.63, 37.95, 20.62, 21.0],
+  sifnos: [36.9, 37.05, 24.63, 24.77], serifos: [37.1, 37.22, 24.42, 24.55], ios: [36.68, 36.8, 25.25, 25.42],
+  folegandros: [36.59, 36.66, 24.87, 25.0], amorgos: [36.78, 36.96, 25.75, 26.03], kythira: [36.12, 36.39, 22.88, 23.1],
+  // Ο Πόρος απέχει λίγα μέτρα από τον Γαλατά, οπότε το νότιο όριο είναι ακριβώς στο στενό.
+  poros: [37.4995, 37.55, 23.445, 23.56], symi: [36.54, 36.63, 27.78, 27.88],
 };
 
 const PORTS = {
@@ -35,6 +39,9 @@ const PORTS = {
   kyllini: { el: "Κυλλήνη", en: "Kyllini", lat: 37.936, lon: 21.141, island: null },
   astakos: { el: "Αστακός", en: "Astakos", lat: 38.532, lon: 21.082, island: null },
   igoumenitsa: { el: "Ηγουμενίτσα", en: "Igoumenitsa", lat: 39.5, lon: 20.26, island: null },
+  galatas: { el: "Γαλατάς", en: "Galatas", lat: 37.497, lon: 23.462, island: null },
+  neapoli: { el: "Νεάπολη Βοιών", en: "Neapoli Voion", lat: 36.515, lon: 23.06, island: null },
+  gythio: { el: "Γύθειο", en: "Gythio", lat: 36.76, lon: 22.565, island: null },
   // Λιμάνια νησιών
   heraklion: { el: "Ηράκλειο", en: "Heraklion", lat: 35.343, lon: 25.137, island: "crete" },
   souda: { el: "Σούδα (Χανιά)", en: "Souda (Chania)", lat: 35.49, lon: 24.08, island: "crete" },
@@ -76,6 +83,15 @@ const PORTS = {
   kefporos: { el: "Πόρος (Κεφαλονιά)", en: "Poros (Kefalonia)", lat: 38.15, lon: 20.78, island: "kefalonia" },
   ithaca: { el: "Ιθάκη", en: "Ithaca", lat: 38.36, lon: 20.7, island: "ithaca" },
   zakynthos: { el: "Ζάκυνθος", en: "Zakynthos", lat: 37.785, lon: 20.9, island: "zakynthos" },
+  kissamos: { el: "Κίσσαμος (Κρήτη)", en: "Kissamos (Crete)", lat: 35.52, lon: 23.655, island: "crete" },
+  sifnos: { el: "Σίφνος", en: "Sifnos", lat: 36.975, lon: 24.675, island: "sifnos" },
+  serifos: { el: "Σέριφος", en: "Serifos", lat: 37.145, lon: 24.515, island: "serifos" },
+  ios: { el: "Ίος", en: "Ios", lat: 36.72, lon: 25.27, island: "ios" },
+  folegandros: { el: "Φολέγανδρος", en: "Folegandros", lat: 36.615, lon: 24.95, island: "folegandros" },
+  amorgos: { el: "Αμοργός", en: "Amorgos", lat: 36.83, lon: 25.86, island: "amorgos" },
+  kythira: { el: "Κύθηρα (Διακόφτι)", en: "Kythira (Diakofti)", lat: 36.265, lon: 23.08, island: "kythira" },
+  poros: { el: "Πόρος", en: "Poros", lat: 37.502, lon: 23.455, island: "poros" },
+  symi: { el: "Σύμη", en: "Symi", lat: 36.615, lon: 27.84, island: "symi" },
 };
 
 // [λιμάνι, λιμάνι, ώρες, από €/άτομο (null = άγνωστο), συχνότητα: many | daily | weekly, noCars]
@@ -114,6 +130,11 @@ const FERRY_LINES = [
   ["kavala", "chios", 13, 27, "weekly"], ["kavala", "samos", 17, 27, "weekly"],
   ["alexandroupoli", "samothraki", 2.25, null, "daily"],
   ["rhodes", "kos", 4, null, "daily"], ["mykonos", "santorini", 2.5, null, "daily"],
+  ["piraeus", "serifos", 3.5, 37, "daily"], ["piraeus", "sifnos", 4.5, null, "daily"], ["serifos", "sifnos", 0.6, 14, "daily"],
+  ["piraeus", "ios", 4.25, 48, "daily"], ["piraeus", "folegandros", 3.75, 48, "daily"], ["piraeus", "amorgos", 8, null, "daily"],
+  ["piraeus", "poros", 1.5, 17, "many"], ["galatas", "poros", 0.15, null, "many"],
+  ["neapoli", "kythira", 1.25, 12.5, "daily"], ["gythio", "kythira", 2.5, 9, "weekly"], ["kissamos", "kythira", 3.6, 14, "weekly"],
+  ["rhodes", "symi", 1.25, null, "daily"],
 ].map(([a, b, hours, price, freq, noCars]) => ({ a, b, hours, price, freq, noCars: !!noCars }));
 
 // Τα νησιά δεν βγαίνουν αξιόπιστα από το geocoding (π.χ. το «Λέσβος» φέρνει ουζερί στην Αθήνα).
@@ -137,6 +158,10 @@ const ISLAND_NAMES = [
   { el: "Κέρκυρα", en: "Corfu", port: "corfu", alt: ["kerkyra"] }, { el: "Παξοί", en: "Paxi", port: "paxi", alt: ["paxos"] },
   { el: "Κεφαλονιά", en: "Kefalonia", port: "sami", alt: ["kefallonia", "cephalonia"] }, { el: "Ιθάκη", en: "Ithaca", port: "ithaca", alt: ["ithaki"] },
   { el: "Ζάκυνθος", en: "Zakynthos", port: "zakynthos", alt: ["zante"] },
+  { el: "Σίφνος", en: "Sifnos", port: "sifnos" }, { el: "Σέριφος", en: "Serifos", port: "serifos" },
+  { el: "Ίος", en: "Ios", port: "ios" }, { el: "Φολέγανδρος", en: "Folegandros", port: "folegandros" },
+  { el: "Αμοργός", en: "Amorgos", port: "amorgos" }, { el: "Κύθηρα", en: "Kythira", port: "kythira", alt: ["kythera", "kithira", "τσιριγο"] },
+  { el: "Πόρος", en: "Poros", port: "poros" }, { el: "Σύμη", en: "Symi", port: "symi", alt: ["simi"] },
 ];
 
 function normalizeName(str) { return String(str || "").toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ς/g, "σ"); }

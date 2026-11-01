@@ -11,14 +11,14 @@
   <meta name="keywords" content="travel planner ελλάδα, υπολογισμός κόστους ταξιδιού, διόδια ελλάδα, κόστος ταξιδιού αυτοκίνητο, οδικό ταξίδι ελλάδα, route planner greece">
   <meta name="author" content="Travel Planner Greece">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://www.travelplanner.gr/">
+  <link rel="canonical" href="https://greek-travel-planner.netlify.app/">
 
   <!-- ── Open Graph (για social media) ── -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.travelplanner.gr/">
+  <meta property="og:url" content="https://greek-travel-planner.netlify.app/">
   <meta property="og:title" content="Travel Planner Greece | Υπολογισμός Κόστους Ταξιδιού">
   <meta property="og:description" content="Οργάνωσε το οδικό σου ταξίδι στην Ελλάδα. Υπολόγισε βενζίνη, διόδια, φαγητό και βρες αξιοθέατα στη διαδρομή σου.">
-  <meta property="og:image" content="https://www.travelplanner.gr/business-trip.png">
+  <meta property="og:image" content="https://greek-travel-planner.netlify.app/business-trip.png">
   <meta property="og:locale" content="el_GR">
   <meta property="og:site_name" content="Travel Planner Greece">
 
@@ -33,7 +33,7 @@
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "Travel Planner Greece",
-    "url": "https://www.travelplanner.gr/",
+    "url": "https://greek-travel-planner.netlify.app/",
     "description": "Δωρεάν εργαλείο για οργάνωση οδικού ταξιδιού στην Ελλάδα. Υπολογισμός κόστους βενζίνης, διοδίων, φαγητού και εισόδων.",
     "applicationCategory": "TravelApplication",
     "operatingSystem": "Web",
@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/png" sizes="30px" href="business-trip.png">
 </head>
-<body>
+<body data-title-el="Travel Planner Greece | Υπολογισμός Κόστους Ταξιδιού στην Ελλάδα" data-title-en="Travel Planner Greece | Trip Cost Calculator for Greece">
 
 <div class="loading-overlay" id="loader">
   <div class="loader"></div>
@@ -65,7 +65,7 @@
 <nav class="navbar">
   <div class="nav-inner">
     <div class="nav-logo">Travel Planner <span>Greece</span></div>
-    <div class="nav-links">
+    <div class="nav-links" id="navLinks">
       <a href="#" data-i18n="nav_home">Αρχή</a>
       <a href="#planner" onclick="event.preventDefault();document.getElementById('planner').scrollIntoView({behavior:'smooth'})" data-i18n="nav_planner">Πλάνο Διαδρομής</a>
       <a href="#guide" onclick="event.preventDefault();document.getElementById('guide').scrollIntoView({behavior:'smooth'})" data-i18n="nav_guide">Οδηγός Προορισμού</a>
@@ -73,6 +73,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
       <button class="lang-btn" id="langBtn">EN</button>
+      <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="navLinks">☰</button>
       <button class="nav-cta" onclick="document.querySelector('.card').scrollIntoView({behavior:'smooth'})" data-i18n="nav_cta">Ξεκίνα →</button>
     </div>
   </div>
@@ -366,7 +367,7 @@
 
   <!-- Footer -->
   <footer class="site-footer">
-    <p data-i18n="footer_copy">© 2025 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.</p>
+    <p data-i18n="footer_copy">© 2026 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.</p>
     <p><a href="privacy.html" data-i18n="footer_privacy">Πολιτική Απορρήτου</a></p>
   </footer>
 

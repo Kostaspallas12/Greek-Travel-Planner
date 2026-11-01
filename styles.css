@@ -74,6 +74,18 @@ body {
   transition: background 0.2s, transform 0.15s;
 }
 .nav-cta:hover { background: var(--blue-dark); transform: translateY(-1px); }
+.nav-cta { text-decoration: none; }
+.nav-toggle {
+  display: none;
+  width: 40px; height: 40px;
+  align-items: center; justify-content: center;
+  background: transparent;
+  border: 1.5px solid #94a3b8;
+  border-radius: 7px;
+  font-size: 1.1rem;
+  color: #475569;
+  cursor: pointer;
+}
 .lang-btn {
   padding: 7px 14px;
   border: 1.5px solid #94a3b8;
@@ -672,7 +684,7 @@ input[type="date"]:focus {
 .toll-hw-row.active .toll-hw-price { color: #b45309; }
 
 .toll-stations-wrap { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
-.toll-stations-wrap.open { max-height: 600px; }
+.toll-stations-wrap.open { max-height: 1000px; }
 .toll-stations-inner {
   padding: 6px 12px 10px 60px;
   display: flex; flex-direction: column; gap: 3px;
@@ -752,14 +764,31 @@ input[type="date"]:focus {
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .nav-links { display: none; }
+  .nav-toggle { display: inline-flex; }
+  .nav-links {
+    display: none;
+    position: absolute; top: 64px; left: 0; right: 0;
+    flex-direction: column; gap: 0;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a { padding: 14px 24px; font-size: 1rem; }
   .hero { padding: 64px 24px 52px; }
 }
 @media (max-width: 600px) {
   .form-row { grid-template-columns: 1fr; }
   .igc-half { grid-template-columns: minmax(0, 1fr); }
   .igc-half > .igc-row:first-child { border-right: none; border-bottom: 1px solid var(--border); }
-  .nav-cta { white-space: nowrap; padding: 9px 14px; }
+  .nav-cta { display: none; }
+  .toll-hw-toggle { width: 44px; height: 26px; border-radius: 13px; }
+  .toll-hw-toggle::after { width: 20px; height: 20px; }
+  .toll-hw-row.active .toll-hw-toggle::after { transform: translateX(18px); }
+  .toll-expand-btn { min-width: 40px; min-height: 40px; font-size: 1.1rem; }
+  .toll-stations-inner { padding-left: 16px; }
+  .toll-st-row { padding: 11px 0; }
+  .toll-st-row input[type="checkbox"] { width: 20px; height: 20px; }
   .cost-grid { grid-template-columns: repeat(2,1fr); }
   .sum-grid { grid-template-columns: repeat(2,1fr); }
   .pdf-section { flex-direction: column; align-items: stretch; }
@@ -880,6 +909,9 @@ input[type="date"]:focus {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── Privacy page languages ── */
+html[lang="en"] .lang-el, html[lang="el"] .lang-en { display: none; }
 
 /* ── Footer ── */
 .site-footer {

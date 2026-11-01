@@ -47,7 +47,7 @@ const T = {
     guide_day:'Ημέρα', guide_places:'τοποθεσίες',
     guide_no_res:'Δεν βρέθηκαν τοποθεσίες για τα επιλεγμένα ενδιαφέροντα. Δοκίμασε διαφορετικά ενδιαφέροντα ή άλλον προορισμό.',
     loading:'Υπολογισμός διαδρομής...',
-    footer_copy:'© 2025 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.',
+    footer_copy:'© 2026 Travel Planner Greece · Τα δεδομένα διοδίων είναι εκτιμήσεις βάσει επίσημων τιμοκαταλόγων.',
     footer_privacy:'Πολιτική Απορρήτου',
     w_clear:'Αίθριος καιρός', w_few_clouds:'Λίγα σύννεφα', w_cloudy:'Συννεφιά',
     w_fog:'Ομίχλη', w_drizzle:'Ψιλόβροχο', w_rain:'Βροχή', w_snow:'Χιόνι',
@@ -61,6 +61,11 @@ const T = {
     no_location:'Δεν βρέθηκε τοποθεσία στην Ελλάδα για',
     no_route:'Δεν βρέθηκε διαδρομή.',
     empty_field:'Υπάρχει κενό πεδίο στη διαδρομή.',
+    unit_km:'χλμ', unit_points:'σημεία', dur_h:'ω', dur_m:'λ',
+    meta_no_dates:'Χωρίς ημερομηνίες', meta_no_notes:'Χωρίς σημειώσεις', meta_notes:'Σημειώσεις',
+    cost_food:'Φαγητό', cost_entry:'Είσοδοι', stop_ph:'Ενδιάμεση στάση...', remove_stop:'Αφαίρεση',
+    guide_program:'Πρόγραμμα', nav_back:'← Επιστροφή στην αρχική',
+    leg_from_port:'Από το λιμάνι', leg_at_port:'Άφιξη στο λιμάνι',
     loading_guide:'Δημιουργία προγράμματος...',
     err_people:'Τα άτομα πρέπει να είναι ακέραιος αριθμός, από 1 και πάνω.',
     err_fuel:'Συμπλήρωσε κατανάλωση και τιμή βενζίνης με αριθμούς μεγαλύτερους από το 0, για να υπολογιστεί το κόστος.',
@@ -125,7 +130,7 @@ const T = {
     guide_day:'Day', guide_places:'places',
     guide_no_res:'No places found for the selected interests. Try different interests or another destination.',
     loading:'Calculating route...',
-    footer_copy:'© 2025 Travel Planner Greece · Toll data are estimates based on official price lists.',
+    footer_copy:'© 2026 Travel Planner Greece · Toll data are estimates based on official price lists.',
     footer_privacy:'Privacy Policy',
     w_clear:'Clear sky', w_few_clouds:'Few clouds', w_cloudy:'Overcast',
     w_fog:'Foggy', w_drizzle:'Drizzle', w_rain:'Rain', w_snow:'Snow',
@@ -139,6 +144,11 @@ const T = {
     no_location:'No location found in Greece for',
     no_route:'No route found.',
     empty_field:'A route field is empty.',
+    unit_km:'km', unit_points:'points', dur_h:'h', dur_m:'min',
+    meta_no_dates:'No dates', meta_no_notes:'No notes', meta_notes:'Notes',
+    cost_food:'Food', cost_entry:'Entries', stop_ph:'Add a stop...', remove_stop:'Remove',
+    guide_program:'Itinerary', nav_back:'← Back to home',
+    leg_from_port:'From the port', leg_at_port:'Arrival at the port',
     loading_guide:'Creating your itinerary...',
     err_people:'People must be a whole number, 1 or more.',
     err_fuel:'Enter fuel consumption and fuel price as numbers above 0, so the cost can be calculated.',
@@ -182,16 +192,27 @@ function applyLang(lang) {
   const btn = qs('langBtn');
   if (btn) btn.textContent = lang === 'el' ? 'EN' : 'ΕΛ';
   document.documentElement.lang = lang;
+  const pageTitle = document.body.dataset[lang === 'en' ? 'titleEn' : 'titleEl'];
+  if (pageTitle) document.title = pageTitle;
   try { localStorage.setItem('lang', lang); } catch {}
 }
 
-window.toggleLang = function() { applyLang(currentLang === 'el' ? 'en' : 'el'); };
+// Ξαναζωγραφίζει ό,τι έχει ήδη εμφανιστεί, κρατώντας τις επιλογές διοδίων του χρήστη.
+window.toggleLang = function() {
+  applyLang(currentLang === 'el' ? 'en' : 'el');
+  clearError();
+  const guideErr = qs('guideErrorBox');
+  if (guideErr) { guideErr.textContent = ''; guideErr.style.display = 'none'; }
+  document.querySelectorAll('.stop-input').forEach(el => { el.placeholder = t('stop_ph'); });
+  if (state.lastRender) renderResults({ ...state.lastRender, scroll: false, keepTolls: true });
+  if (state.lastGuide) renderGuideResults(...state.lastGuide, false);
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const state = { stopIndex: 0, renderId: 0, lastRender: null };
+const state = { stopIndex: 0, renderId: 0, lastRender: null, lastGuide: null };
 
-const VEHICLE_LABELS = { "0.5": "Μοτοσυκλέτα", "1.0": "Αυτοκίνητο", "1.4": "Αυτοκίνητο με ρυμουλκό", "2.0": "Φορτηγό" };
+const VEHICLE_KEYS = { "0.5": "v_moto", "1.0": "v_car", "1.4": "v_trailer", "2.0": "v_truck" };
 const VEHICLE_ICONS = { "0.5": "🏍️", "1.0": "🚗", "1.4": "🚙", "2.0": "🚛" };
 
 const HIGHWAYS = [
@@ -268,6 +289,17 @@ const HIGHWAYS = [
   }
 ];
 
+const TOLL_EN = {
+  "Αττική Οδός": "Attiki Odos", "Νέα Οδός (Αθήνα–Λαμία)": "Nea Odos (Athens–Lamia)", "Αφίδνες": "Afidnes", "Θήβα": "Thiva", "Τραγάνα": "Tragana", "Αγία Τριάδα": "Agia Triada", "Μαυρομαντήλα": "Mavromantila",
+  "Αυτ/μος Αιγαίου (Λαμία–Θεσ/νίκη)": "Aegean Motorway (Lamia–Thessaloniki)", "Πελασγία": "Pelasgia", "Μοσχοχώρι": "Moschochori", "Μακρυχώρι": "Makrychori", "Λεπτοκαρυά": "Leptokarya", "Κλειδί (Αιγίνιο)": "Kleidi (Aiginio)",
+  "Ολυμπία Οδός (Αθήνα–Πάτρα)": "Olympia Odos (Athens–Patras)", "Ελευσίνα": "Elefsina", "Ισθμός": "Isthmos", "Κιάτο": "Kiato", "Ελαιώνας": "Elaionas", "Ρίο": "Rio",
+  "Γέφυρα Ρίου–Αντιρρίου": "Rio–Antirrio Bridge", "Ιόνια Οδός (Αντίρριο–Ιωάννινα)": "Ionia Odos (Antirrio–Ioannina)", "Κλόκοβα": "Klokova", "Αγγελόκαστρο": "Angelokastro", "Μενίδι Άρτας": "Menidi (Arta)", "Τέροβο": "Terovo",
+  "Ε65 (Λαμία–Καλαμπάκα)": "E65 (Lamia–Kalambaka)", "Λιανοκλάδι": "Lianokladi", "Τρίκαλα": "Trikala",
+  "Εγνατία Οδός": "Egnatia Odos", "Τύρια (Παραμυθιά)": "Tyria (Paramythia)", "Παμβώτιδα": "Pamvotida", "Μαλακάσι (Μέτσοβο)": "Malakasi (Metsovo)", "Σιάτιστα": "Siatista", "Πολύμυλος (Κοζάνη)": "Polymylos (Kozani)", "Μάλγαρα": "Malgara", "Θεσ/νίκη (Ωραιόκαστρο)": "Thessaloniki (Oraiokastro)", "Ανάληψη (Λαγκαδά)": "Analipsi (Lagkadas)", "Ασπροβάλτα": "Asprovalta", "Μουσθένη (Καβάλα)": "Mousthéni (Kavala)", "Ίασμος (Κομοτηνή)": "Iasmos (Komotini)", "Μεστής": "Mesti", "Αρδανίου": "Ardanio",
+  "Μορέας (Κόρινθος–Καλαμάτα)": "Moreas (Corinth–Kalamata)", "Σπαθοβούνι": "Spathovouni", "Νεστάνη": "Nestani", "Γέφυρα Μαναρη": "Manari Bridge", "Βελιγοστή": "Veligosti", "Καλαμάτα": "Kalamata",
+};
+function tollName(name) { return currentLang === 'en' ? (TOLL_EN[name] || name) : name; }
+
 // ─── TOLL STATE ───────────────────────────────────────────────────────────────
 const tollState = { checkedStations: {}, vehicleKey: "1.0" };
 
@@ -315,9 +347,9 @@ window.toggleTollCard = function() {
 
 function stationDomId(hw, st) { return `${hw.id}_${hw.stations.indexOf(st)}`; }
 
-function renderTollPicker(vehicleKey) {
+function renderTollPicker(vehicleKey, keepSelection = false) {
   tollState.vehicleKey = vehicleKey;
-  tollState.checkedStations = {};
+  if (!keepSelection) tollState.checkedStations = {};
 
   const inner = qs("tollPickerInner");
   if (!inner) return;
@@ -328,7 +360,7 @@ function renderTollPicker(vehicleKey) {
       <div class="toll-hw-item">
         <div class="toll-hw-row" id="hwrow_${hw.id}">
           <div class="toll-hw-toggle" id="hwtoggle_${hw.id}" onclick="onHwToggleClick('${hw.id}')"></div>
-          <span class="toll-hw-name">${escapeHtml(hw.name)}</span>
+          <span class="toll-hw-name">${escapeHtml(tollName(hw.name))}</span>
           ${!isSingle ? `<button class="toll-expand-btn" id="hwexpbtn_${hw.id}" onclick="toggleHwStations('${hw.id}')">›</button>` : ''}
           <span class="toll-hw-price" id="hwprice_${hw.id}">0.00€</span>
         </div>
@@ -340,7 +372,7 @@ function renderTollPicker(vehicleKey) {
               const safeId = stationDomId(hw, st);
               return `<label class="toll-st-row" for="st_${safeId}">
                 <input type="checkbox" id="st_${safeId}" data-key="${escapeHtml(k)}" onchange="onStationChange(this)">
-                <span class="toll-st-name" id="stname_${safeId}">${escapeHtml(st.name)}</span>
+                <span class="toll-st-name" id="stname_${safeId}">${escapeHtml(tollName(st.name))}</span>
                 <span class="toll-st-price">${euro(st.tolls[vehicleKey] || 0)}</span>
               </label>`;
             }).join("")}
@@ -431,21 +463,36 @@ function refreshCosts() {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
+// [όνομα, περιγραφή] ανά γλώσσα
 const POI_BY_CITY = {
-  "θεσσαλονικη": { sights: [{ name: "Λευκός Πύργος", desc: "Σύμβολο της πόλης" }, { name: "Άγιος Δημήτριος", desc: "Ιστορικός ναός" }], food: [{ name: "Λαδάδικα", desc: "Περιοχή για φαγητό και βράδυ" }, { name: "Τρίγωνα Πανοράματος", desc: "Κλασικό γλυκό της πόλης" }] },
-  "αθηνα": { sights: [{ name: "Ακρόπολη", desc: "Το πιο εμβληματικό σημείο" }, { name: "Πλάκα", desc: "Ιστορική γειτονιά" }], food: [{ name: "Μοναστηράκι", desc: "Street food και βόλτα" }, { name: "Κουκάκι", desc: "Καφέ και brunch" }] },
-  "πατρα": { sights: [{ name: "Κάστρο Πατρών", desc: "Ιστορικό κάστρο με θέα" }, { name: "Ρωμαϊκό Ωδείο", desc: "Σημαντικό αρχαιολογικό μνημείο" }], food: [{ name: "Ρήγα Φεραίου", desc: "Κεντρικός δρόμος με καφέ και φαγητό" }, { name: "Παραλία Πάτρας", desc: "Βόλτα και στάση για φαγητό" }] },
-  "κοζανη": { sights: [{ name: "Κεντρική Πλατεία", desc: "Σημείο αναφοράς της πόλης" }, { name: "Λαογραφικό Μουσείο", desc: "Ματιά στην τοπική ιστορία" }], food: [{ name: "Τοπική ταβέρνα", desc: "Δοκίμασε τοπικές γεύσεις" }, { name: "Κέντρο Κοζάνης", desc: "Καφέ και φαγητό" }] }
+  "θεσσαλονικη": {
+    el: { sights: [["Λευκός Πύργος", "Σύμβολο της πόλης"], ["Άγιος Δημήτριος", "Ιστορικός ναός"]], food: [["Λαδάδικα", "Περιοχή για φαγητό και βράδυ"], ["Τρίγωνα Πανοράματος", "Κλασικό γλυκό της πόλης"]] },
+    en: { sights: [["White Tower", "The symbol of the city"], ["Agios Dimitrios", "Historic church"]], food: [["Ladadika", "An area for food and nights out"], ["Trigona Panoramatos", "The city's classic pastry"]] } },
+  "αθηνα": {
+    el: { sights: [["Ακρόπολη", "Το πιο εμβληματικό σημείο"], ["Πλάκα", "Ιστορική γειτονιά"]], food: [["Μοναστηράκι", "Street food και βόλτα"], ["Κουκάκι", "Καφέ και brunch"]] },
+    en: { sights: [["Acropolis", "The most iconic landmark"], ["Plaka", "Historic neighbourhood"]], food: [["Monastiraki", "Street food and a stroll"], ["Koukaki", "Coffee and brunch"]] } },
+  "πατρα": {
+    el: { sights: [["Κάστρο Πατρών", "Ιστορικό κάστρο με θέα"], ["Ρωμαϊκό Ωδείο", "Σημαντικό αρχαιολογικό μνημείο"]], food: [["Ρήγα Φεραίου", "Κεντρικός δρόμος με καφέ και φαγητό"], ["Παραλία Πάτρας", "Βόλτα και στάση για φαγητό"]] },
+    en: { sights: [["Patras Castle", "Historic castle with a view"], ["Roman Odeon", "Important archaeological monument"]], food: [["Riga Feraiou", "Central street with cafes and food"], ["Patras seafront", "A walk and a food stop"]] } },
+  "κοζανη": {
+    el: { sights: [["Κεντρική Πλατεία", "Σημείο αναφοράς της πόλης"], ["Λαογραφικό Μουσείο", "Ματιά στην τοπική ιστορία"]], food: [["Τοπική ταβέρνα", "Δοκίμασε τοπικές γεύσεις"], ["Κέντρο Κοζάνης", "Καφέ και φαγητό"]] },
+    en: { sights: [["Central Square", "The city's meeting point"], ["Folklore Museum", "A look at local history"]], food: [["Local tavern", "Try local flavours"], ["Kozani centre", "Coffee and food"]] } },
+};
+const POI_ALIASES = { thessaloniki: "θεσσαλονικη", athens: "αθηνα", patras: "πατρα", patra: "πατρα", kozani: "κοζανη" };
+const POI_DEFAULT = {
+  el: { sights: [["Κεντρική πλατεία", "Καλή πρώτη στάση για βόλτα"]], food: [["Τοπική ταβέρνα", "Δοκίμασε τοπική κουζίνα"]] },
+  en: { sights: [["Central square", "A good first stop for a walk"]], food: [["Local tavern", "Try the local cuisine"]] },
 };
 
 function qs(id) { return document.getElementById(id); }
 function greekKey(str) { return String(str || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
-function getPoiForCity(name) { const k = greekKey(name); return POI_BY_CITY[k] || { sights: [{ name: "Κεντρική πλατεία", desc: "Καλή πρώτη στάση για βόλτα" }], food: [{ name: "Τοπική ταβέρνα", desc: "Δοκίμασε τοπική κουζίνα" }] }; }
+function getPoiForCity(name) { const k = greekKey(name); const pois = POI_BY_CITY[POI_ALIASES[k] || k] || POI_DEFAULT; return pois[currentLang] || pois.el; }
+function poiLines(items) { return items.map(([name, desc]) => `${escapeHtml(name)} — ${escapeHtml(desc)}`).join("<br>"); }
 function showError(msg) { const b = qs("errorBox"); if (!b) return; b.textContent = msg; b.style.display = "block"; }
 function clearError() { const b = qs("errorBox"); if (!b) return; b.textContent = ""; b.style.display = "none"; }
 function showLoader(on, textKey = "loading") { const l = qs("loader"); if (!l) return; const text = l.querySelector(".loading-text"); if (on && text) text.textContent = t(textKey); l.style.display = on ? "flex" : "none"; }
 function formatDate(v) { if (!v) return null; const [y,m,d] = v.split("-"); return `${d}/${m}/${y}`; }
-function formatDuration(s) { const tm = Math.round(s/60); const h = Math.floor(tm/60); const m = tm%60; if (h<=0) return `${m}λ`; if (m===0) return `${h}ω`; return `${h}ω ${m}λ`; }
+function formatDuration(s) { const tm = Math.round(s/60); const h = Math.floor(tm/60); const m = tm%60; if (h<=0) return `${m}${t('dur_m')}`; if (m===0) return `${h}${t('dur_h')}`; return `${h}${t('dur_h')} ${m}${t('dur_m')}`; }
 function euro(v) { return `${Number(v||0).toFixed(2)}€`; }
 function calcFuelCost(km, c, p) { return (km/100)*c*p; }
 function calcFoodCost(ppl, f) { return ppl*f; }
@@ -481,10 +528,10 @@ const SUGGESTION_ORDER = ["city", "suburb", "county", "state", "postcode", "stre
 function suggestionRank(item) { const i = SUGGESTION_ORDER.indexOf(item.result_type); return i < 0 ? SUGGESTION_ORDER.length : i; }
 
 function islandName(island) { return island[currentLang] || island.el; }
-function islandPlace(island) { const p = PORTS[island.port]; return { name: islandName(island), label: islandName(island), lat: p.lat, lon: p.lon }; }
+function islandPlace(island) { const p = PORTS[island.port]; return { name: islandName(island), label: islandName(island), names: { el: island.el, en: island.en }, lat: p.lat, lon: p.lon }; }
 
 async function searchCitySuggestions(text) {
-  const url = `${GEOAPIFY_PROXY}?endpoint=autocomplete&text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=8`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=autocomplete&text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=8&lang=${currentLang}`;
   const results = ((await apiJson(url)).results || []).sort((a, b) => suggestionRank(a) - suggestionRank(b));
   const islands = findIslandsByPrefix(text).map(island => { const p = islandPlace(island); return { name: p.name, formatted: p.label, lat: p.lat, lon: p.lon }; });
   return [...islands, ...results].slice(0, 5);
@@ -505,9 +552,7 @@ function pickConfidentResult(results) {
 }
 
 async function geocodePlace(text) {
-  const island = findIslandExact(text);
-  if (island) return islandPlace(island);
-  const url = `${GEOAPIFY_PROXY}?endpoint=search&text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=5`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=search&text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=5&lang=${currentLang}`;
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(`${t('no_location')}: ${text}`);
   const item = pickConfidentResult(data.results);
@@ -518,6 +563,8 @@ async function geocodePlace(text) {
 async function resolvePlaceFromInput(input) {
   const value = input.value.trim();
   if (!value) throw new Error(t('empty_field'));
+  const island = findIslandExact(value);
+  if (island) return islandPlace(island);
   const { label, lat, lon, name } = input.dataset;
   if (label && lat && lon && value === label) return { name: name||value, label, lat: Number(lat), lon: Number(lon) };
   try { return await geocodePlace(value); }
@@ -527,7 +574,7 @@ async function resolvePlaceFromInput(input) {
 async function getRoute(places, { avoidFerries = false } = {}) {
   const waypoints = places.map(p=>`${p.lat},${p.lon}`).join("|");
   const avoidParam = avoidFerries ? "&avoid=ferries" : "";
-  const url = `${GEOAPIFY_PROXY}?endpoint=routing&waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=el${avoidParam}`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=routing&waypoints=${encodeURIComponent(waypoints)}&mode=drive&format=json&lang=${currentLang}${avoidParam}`;
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(t('no_route'));
   return data.results[0];
@@ -563,7 +610,7 @@ function createStopRow() {
   state.stopIndex += 1;
   const wrapper = document.createElement("div");
   wrapper.className = "stop-row";
-  wrapper.innerHTML = `<div class="field" style="margin:0;"><input class="input place-input stop-input" type="text" placeholder="Ενδιάμεση στάση..." /><div class="autocomplete-list"></div></div><button class="icon-btn" type="button" title="Αφαίρεση">✕</button>`;
+  wrapper.innerHTML = `<div class="field" style="margin:0;"><input class="input place-input stop-input" type="text" placeholder="${t('stop_ph')}" /><div class="autocomplete-list"></div></div><button class="icon-btn" type="button" title="${t('remove_stop')}" aria-label="${t('remove_stop')}">✕</button>`;
   wrapper.querySelector(".icon-btn").addEventListener("click", () => wrapper.remove());
   createAutocomplete(wrapper.querySelector("input"));
   return wrapper;
@@ -577,7 +624,9 @@ window.toggleLeg = function(header) { const body = header.nextElementSibling; if
 // ─── TRIP PLAN (ΔΡΟΜΟΣ + ΠΛΟΙΟ) ──────────────────────────────────────────────
 
 function portName(id) { return PORTS[id][currentLang] || PORTS[id].el; }
-function portPlace(id) { const p = PORTS[id]; return { name: portName(id), label: portName(id), lat: p.lat, lon: p.lon }; }
+function portPlace(id) { const p = PORTS[id]; return { name: portName(id), label: portName(id), names: { el: p.el, en: p.en }, lat: p.lat, lon: p.lon }; }
+function placeName(p) { return p.names?.[currentLang] || p.name; }
+function placeLabel(p) { return p.names ? placeName(p) : (p.label || p.name); }
 function sameLand(a, b) { return islandAt(a.lat, a.lon) === islandAt(b.lat, b.lon); }
 
 async function fetchRoadLegs(places) {
@@ -604,7 +653,7 @@ async function buildSeaSegment(from, to) {
   const paths = findSeaPaths(from, to);
   const built = await Promise.allSettled(paths.map(lines => buildSeaOption(from, to, lines)));
   const options = built.filter(r => r.status === "fulfilled").map(r => r.value);
-  if (!options.length) throw new Error(`${t('no_sea_route')}: ${from.name} → ${to.name}`);
+  if (!options.length) throw new Error(`${t('no_sea_route')}: ${placeName(from)} → ${placeName(to)}`);
   return { from, to, options, selected: 0 };
 }
 
@@ -650,7 +699,7 @@ function renderSeaOptions(plan) {
   box.innerHTML = `${warning}<div class="sea-card">
     <h3>${t('sea_title')}</h3>
     ${seaSegments.map(({ seg, i }) => `
-      ${seaSegments.length > 1 ? `<div class="sea-segment-title">${escapeHtml(seg.from.name)} → ${escapeHtml(seg.to.name)}</div>` : ""}
+      ${seaSegments.length > 1 ? `<div class="sea-segment-title">${escapeHtml(placeName(seg.from))} → ${escapeHtml(placeName(seg.to))}</div>` : ""}
       ${seg.options.map((option, j) => {
         const { km, sec } = optionSummary(option);
         const lines = option.lines.map(l => {
@@ -659,7 +708,7 @@ function renderSeaOptions(plan) {
         }).join("");
         return `<label class="sea-option${j === seg.selected ? " selected" : ""}">
           <input type="radio" name="sea_${i}" ${j === seg.selected ? "checked" : ""} onchange="selectSeaOption(${i},${j})">
-          <div class="sea-option-body">${lines}<div class="sea-option-total">${km.toFixed(0)} χλμ ${t('sea_road')} · ~${formatDuration(sec)} ${t('sea_total')}</div></div>
+          <div class="sea-option-body">${lines}<div class="sea-option-total">${km.toFixed(0)} ${t('unit_km')} ${t('sea_road')} · ~${formatDuration(sec)} ${t('sea_total')}</div></div>
         </label>`;
       }).join("")}`).join("")}
     <p class="sea-note">${t('sea_note')}</p>
@@ -673,7 +722,7 @@ window.selectSeaOption = function(segIndex, optionIndex) {
   renderResults({ ...last, scroll: false });
 };
 
-async function renderResults({ places, plan, settings, tripInfo, scroll = true }) {
+async function renderResults({ places, plan, settings, tripInfo, scroll = true, keepTolls = false }) {
   const renderId = ++state.renderId;
   state.lastRender = { places, plan, settings, tripInfo };
   const legs = flattenPlan(plan);
@@ -691,23 +740,23 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true }
   window.cachedCosts = { fuel: totalFuel, food: totalFood, entry: totalEntries, ferry: totalFerry };
   renderSeaOptions(plan);
 
-  if (qs("routeTitle")) qs("routeTitle").textContent = `${places[0].name} → ${places[places.length-1].name}`;
-  const dateLabel = tripInfo.dateFrom ? `${formatDate(tripInfo.dateFrom)}${tripInfo.dateTo?" – "+formatDate(tripInfo.dateTo):""}` : "Χωρίς ημερομηνίες";
+  if (qs("routeTitle")) qs("routeTitle").textContent = `${placeName(places[0])} → ${placeName(places[places.length-1])}`;
+  const dateLabel = tripInfo.dateFrom ? `${formatDate(tripInfo.dateFrom)}${tripInfo.dateTo?" – "+formatDate(tripInfo.dateTo):""}` : t('meta_no_dates');
   if (qs("metaDates")) qs("metaDates").textContent = dateLabel;
   if (qs("metaPeople")) qs("metaPeople").textContent = `${settings.people} ${settings.people>1?t('leg_people'):t('leg_person')}`;
-  if (qs("metaVehicle")) qs("metaVehicle").textContent = VEHICLE_LABELS[vehicleKey]||"Αυτοκίνητο";
+  if (qs("metaVehicle")) qs("metaVehicle").textContent = t(VEHICLE_KEYS[vehicleKey]||"v_car");
   if (qs("metaVehicleIcon")) qs("metaVehicleIcon").textContent = VEHICLE_ICONS[vehicleKey]||"🚗";
-  if (qs("metaNotes")) qs("metaNotes").textContent = tripInfo.notes ? `Σημειώσεις: ${tripInfo.notes.slice(0,40)}${tripInfo.notes.length>40?"...":""}` : "Χωρίς σημειώσεις";
+  if (qs("metaNotes")) qs("metaNotes").textContent = tripInfo.notes ? `${t('meta_notes')}: ${tripInfo.notes.slice(0,40)}${tripInfo.notes.length>40?"...":""}` : t('meta_no_notes');
   if (qs("mapsLink")) qs("mapsLink").href = buildGoogleMapsUrl(places);
-  if (qs("sumDistance")) qs("sumDistance").textContent = `${totalKm.toFixed(1)} χλμ`;
+  if (qs("sumDistance")) qs("sumDistance").textContent = `${totalKm.toFixed(1)} ${t('unit_km')}`;
   if (qs("sumDuration")) qs("sumDuration").textContent = formatDuration(totalDurationSec);
-  if (qs("sumStops")) qs("sumStops").textContent = `${places.length} σημεία`;
-  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry);
+  if (qs("sumStops")) qs("sumStops").textContent = `${places.length} ${t('unit_points')}`;
+  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry + (keepTolls ? allTolls() : 0));
 
   const tollBody = qs("tollCardBody");
   if (tollBody) tollBody.classList.add("open");
   if (qs("tollCardIcon")) qs("tollCardIcon").textContent = "▴";
-  renderTollPicker(vehicleKey);
+  renderTollPicker(vehicleKey, keepTolls);
 
   const legsContainer = qs("legs");
   if (!legsContainer) return;
@@ -715,7 +764,7 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true }
 
   const originCard = document.createElement("div");
   originCard.className = "leg-card";
-  originCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${t('leg_origin')}: ${escapeHtml(places[0].name)}</h3><p>${t('leg_origin_desc')}</p></div><div>▾</div></div><div class="leg-body"><div class="place-list"><div class="place-item"><strong>${t('leg_start')}</strong><div class="muted">${escapeHtml(places[0].label||places[0].name)}</div></div></div></div>`;
+  originCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${t('leg_origin')}: ${escapeHtml(placeName(places[0]))}</h3><p>${t('leg_origin_desc')}</p></div><div>▾</div></div><div class="leg-body"><div class="place-list"><div class="place-item"><strong>${t('leg_start')}</strong><div class="muted">${escapeHtml(placeLabel(places[0]))}</div></div></div></div>`;
   legsContainer.appendChild(originCard);
 
   const weatherDate = tripInfo.dateFrom || todayIso();
@@ -741,14 +790,14 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true }
     if (!leg.endsAtStop) {
       const roadCard = document.createElement("div");
       roadCard.className = "leg-card";
-      roadCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${escapeHtml(fromPlace.name)} → ${escapeHtml(toPlace.name)}</h3><p>${t('sea_road_leg')} • ${legKm.toFixed(1)} χλμ • ${formatDuration(legSec)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_fuel')}</small><strong>${euro(legFuel)}</strong></div></div></div>`;
+      roadCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${escapeHtml(placeName(fromPlace))} → ${escapeHtml(placeName(toPlace))}</h3><p>${t('sea_road_leg')} • ${legKm.toFixed(1)} ${t('unit_km')} • ${formatDuration(legSec)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_fuel')}</small><strong>${euro(legFuel)}</strong></div></div></div>`;
       legsContainer.appendChild(roadCard);
       continue;
     }
 
     const legFood = calcFoodCost(settings.people, settings.foodPerStop);
     const legEntry = calcEntryCost(settings.people, settings.entryPerStop);
-    const poi = getPoiForCity(toPlace.name);
+    const poi = getPoiForCity(placeName(toPlace));
     const weather = await getWeather(toPlace.lat, toPlace.lon, weatherDate);
     if (renderId !== state.renderId) return;
 
@@ -763,20 +812,20 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true }
     card.className = "leg-card";
     card.innerHTML = `
       <div class="leg-head" onclick="toggleLeg(this)">
-        <div><h3>${escapeHtml(fromPlace.name)} → ${escapeHtml(toPlace.name)}</h3><p>${legKm.toFixed(1)} χλμ • ${formatDuration(legSec)}</p></div>
+        <div><h3>${placeName(fromPlace) === placeName(toPlace) ? `${t('leg_from_port')}: ${escapeHtml(placeName(toPlace))}` : `${escapeHtml(placeName(fromPlace))} → ${escapeHtml(placeName(toPlace))}`}</h3><p>${leg.distance === 0 ? t('leg_at_port') : `${legKm.toFixed(1)} ${t('unit_km')} • ${formatDuration(legSec)}`}</p></div>
         <div>▾</div>
       </div>
       <div class="leg-body">
         <div class="cost-grid">
-          <div class="cost-box"><small>Βενζίνη</small><strong>${euro(legFuel)}</strong></div>
-          <div class="cost-box"><small>Φαγητό</small><strong>${euro(legFood)}</strong></div>
-          <div class="cost-box"><small>Είσοδοι</small><strong>${euro(legEntry)}</strong></div>
+          <div class="cost-box"><small>${t('sea_fuel')}</small><strong>${euro(legFuel)}</strong></div>
+          <div class="cost-box"><small>${t('cost_food')}</small><strong>${euro(legFood)}</strong></div>
+          <div class="cost-box"><small>${t('cost_entry')}</small><strong>${euro(legEntry)}</strong></div>
         </div>
         <div class="place-list">
           ${weatherHtml}
-          <div class="place-item"><strong>${t('leg_sights')}</strong><div class="muted">${poi.sights.map(x=>`${escapeHtml(x.name)} — ${escapeHtml(x.desc)}`).join("<br>")}</div></div>
-          <div class="place-item"><strong>${t('leg_food')}</strong><div class="muted">${poi.food.map(x=>`${escapeHtml(x.name)} — ${escapeHtml(x.desc)}`).join("<br>")}</div></div>
-          <div class="place-item"><strong>${t('leg_arrival')}</strong><div class="muted">${escapeHtml(toPlace.label||toPlace.name)}</div></div>
+          <div class="place-item"><strong>${t('leg_sights')}</strong><div class="muted">${poiLines(poi.sights)}</div></div>
+          <div class="place-item"><strong>${t('leg_food')}</strong><div class="muted">${poiLines(poi.food)}</div></div>
+          <div class="place-item"><strong>${t('leg_arrival')}</strong><div class="muted">${escapeHtml(placeLabel(toPlace))}</div></div>
         </div>
       </div>`;
     legsContainer.appendChild(card);
@@ -808,6 +857,7 @@ function validateDates(dateFrom, dateTo) {
 async function handleSearch() {
   clearError();
   if (qs("results")) qs("results").style.display = "none";
+  state.lastRender = null;
   const { originInput, destinationInput, stopInputs } = collectRouteInputs();
   if (!originInput || !destinationInput) { showError(t('err_missing_fields')); return; }
   if (!originInput.value.trim() || !destinationInput.value.trim()) { showError(t('err_fill_route')); return; }
@@ -846,16 +896,16 @@ const GUIDE_CAT_ICONS = {
 };
 
 const GUIDE_CAT_LABELS = {
-  'catering.restaurant': 'Εστιατόριο', 'catering.cafe': 'Καφέ', 'catering.bar': 'Μπαρ',
-  'catering.fast_food': 'Fast food', 'tourism.attraction': 'Αξιοθέατο',
-  'tourism.sights': 'Αξιοθέατο', 'entertainment.museum': 'Μουσείο',
-  'adult.nightclub': 'Νυχτερινό κέντρο', 'leisure.park': 'Πάρκο',
-  'natural': 'Φύση', 'commercial.shopping_mall': 'Εμπορικό κέντρο',
-  'commercial': 'Κατάστημα', 'beach': 'Παραλία', 'natural.water': 'Παραλία / Θαλάσσιο',
+  'catering.restaurant': { el: 'Εστιατόριο', en: 'Restaurant' }, 'catering.cafe': { el: 'Καφέ', en: 'Cafe' }, 'catering.bar': { el: 'Μπαρ', en: 'Bar' },
+  'catering.fast_food': { el: 'Fast food', en: 'Fast food' }, 'tourism.attraction': { el: 'Αξιοθέατο', en: 'Attraction' },
+  'tourism.sights': { el: 'Αξιοθέατο', en: 'Sight' }, 'entertainment.museum': { el: 'Μουσείο', en: 'Museum' },
+  'adult.nightclub': { el: 'Νυχτερινό κέντρο', en: 'Nightclub' }, 'leisure.park': { el: 'Πάρκο', en: 'Park' },
+  'natural': { el: 'Φύση', en: 'Nature' }, 'commercial.shopping_mall': { el: 'Εμπορικό κέντρο', en: 'Shopping centre' },
+  'commercial': { el: 'Κατάστημα', en: 'Shop' }, 'beach': { el: 'Παραλία', en: 'Beach' }, 'natural.water': { el: 'Παραλία / Θαλάσσιο', en: 'Beach / Water' },
 };
 
 function guideCatIcon(cat) { return GUIDE_CAT_ICONS[cat] || '📍'; }
-function guideCatLabel(cat) { return GUIDE_CAT_LABELS[cat] || ''; }
+function guideCatLabel(cat) { return GUIDE_CAT_LABELS[cat]?.[currentLang] || ''; }
 
 // Το API δίνει τις κατηγορίες αλφαβητικά, οπότε κρατάμε την πιο συγκεκριμένη που γνωρίζουμε.
 function bestGuideCategory(categories) {
@@ -876,7 +926,7 @@ function guidePlaceScore(props) {
 
 async function fetchGuidePlaces(lat, lon, cats, limit) {
   const fetchLimit = Math.max(40, limit * 2);
-  const url = `${GEOAPIFY_PROXY}?endpoint=places&categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&bias=proximity:${lon},${lat}&limit=${fetchLimit}`;
+  const url = `${GEOAPIFY_PROXY}?endpoint=places&categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&bias=proximity:${lon},${lat}&limit=${fetchLimit}&lang=${currentLang}`;
   try {
     const data = await apiJson(url);
     const seen = new Set();
@@ -901,6 +951,7 @@ async function handleGuideSearch() {
   const clearErr = () => { if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; } };
   clearErr();
   if (qs('guideResults')) qs('guideResults').style.display = 'none';
+  state.lastGuide = null;
 
   if (!destInput?.value.trim()) { showErr(t('err_fill_dest')); return; }
 
@@ -931,7 +982,7 @@ async function handleGuideSearch() {
       if (chunk.length) dayPlans.push(chunk);
     }
 
-    renderGuideResults(place.name, dayPlans, days);
+    renderGuideResults(place, dayPlans, days);
   } catch (err) {
     console.error(err);
     if (errBox) { errBox.textContent = err.message || t('err_guide'); errBox.style.display = 'block'; }
@@ -940,19 +991,20 @@ async function handleGuideSearch() {
   }
 }
 
-function renderGuideResults(cityName, dayPlans, days) {
+function renderGuideResults(place, dayPlans, days, scroll = true) {
+  state.lastGuide = [place, dayPlans, days];
   const resultsEl = qs('guideResults');
   const titleEl = qs('guideResultsTitle');
   const cardsEl = qs('guideDayCards');
   if (!resultsEl || !cardsEl) return;
 
-  if (titleEl) titleEl.textContent = `Πρόγραμμα: ${cityName}`;
+  if (titleEl) titleEl.textContent = `${t('guide_program')}: ${placeName(place)}`;
   cardsEl.innerHTML = '';
 
   if (!dayPlans.length) {
     cardsEl.innerHTML = `<p style="color:var(--text-muted);padding:16px 0;">${t('guide_no_res')}</p>`;
     resultsEl.style.display = 'block';
-    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (scroll) resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
 
@@ -986,7 +1038,7 @@ function renderGuideResults(cityName, dayPlans, days) {
   });
 
   resultsEl.style.display = 'block';
-  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (scroll) resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function downloadPDF() {
@@ -994,7 +1046,17 @@ function downloadPDF() {
   setTimeout(() => window.print(), 300);
 }
 
+function initMenu() {
+  const toggle = qs("navToggle");
+  const links = qs("navLinks");
+  if (!toggle || !links) return;
+  const setOpen = open => { links.classList.toggle("open", open); toggle.setAttribute("aria-expanded", String(open)); };
+  toggle.addEventListener("click", () => setOpen(!links.classList.contains("open")));
+  links.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
+}
+
 function initApp() {
+  initMenu();
   const addStopBtn = qs("addStopBtn");
   const searchBtn = qs("searchBtn");
   if (addStopBtn) addStopBtn.addEventListener("click", () => { const c = qs("stopsContainer"); if (c) c.appendChild(createStopRow()); });
