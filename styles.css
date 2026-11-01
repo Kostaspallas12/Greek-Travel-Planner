@@ -549,6 +549,7 @@ input[type="date"]:focus {
 .sea-option-line { font-weight: 600; margin-bottom: 6px; }
 .sea-option-line .muted { font-weight: 400; font-size: 0.82rem; color: var(--text-muted); }
 .sea-option-total { font-size: 0.82rem; color: var(--text-muted); }
+.sea-option-transfer { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 6px; }
 .sea-note { font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
 .sea-warning {
   background: #fff7ed; border: 1.5px solid #fdba74; border-radius: var(--radius-sm);

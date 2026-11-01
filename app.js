@@ -652,8 +652,15 @@ async function roadLegsBetween(a, b) {
 async function buildSeaOption(from, to, lines) {
   const firstPort = portPlace(lines[0].from);
   const lastPort = portPlace(lines[lines.length-1].to);
-  const [toPort, fromPort] = await Promise.all([roadLegsBetween(from, firstPort), roadLegsBetween(lastPort, to)]);
-  return { lines, legs: [...toPort, ...lines.map(line => ({ type: "ferry", line })), ...fromPort] };
+  const between = lines.slice(1).filter((line, i) => line.from !== lines[i].to).map(line => ({ line, a: portPlace(lines[lines.indexOf(line) - 1].to), b: portPlace(line.from) }));
+  const [toPort, fromPort, ...transfers] = await Promise.all([roadLegsBetween(from, firstPort), roadLegsBetween(lastPort, to), ...between.map(({ a, b }) => roadLegsBetween(a, b))]);
+  const legs = [...toPort];
+  lines.forEach(line => {
+    const transfer = between.findIndex(t => t.line === line);
+    if (transfer >= 0) legs.push(...transfers[transfer]);
+    legs.push({ type: "ferry", line });
+  });
+  return { lines, legs: [...legs, ...fromPort] };
 }
 
 async function buildSeaSegment(from, to) {
@@ -709,9 +716,11 @@ function renderSeaOptions(plan) {
       ${seaSegments.length > 1 ? `<div class="sea-segment-title">${escapeHtml(placeName(seg.from))} → ${escapeHtml(placeName(seg.to))}</div>` : ""}
       ${seg.options.map((option, j) => {
         const { km, sec } = optionSummary(option);
-        const lines = option.lines.map(l => {
+        const lines = option.lines.map((l, k) => {
+          const prev = option.lines[k - 1];
+          const transfer = prev && prev.to !== l.from ? `<div class="sea-option-transfer">🚗 ${t('sea_road_leg')}: ${escapeHtml(portName(prev.to))} → ${escapeHtml(portName(l.from))}</div>` : "";
           const price = l.price === null ? t('sea_no_price') : `${euro(l.price)}${t('sea_person')}`;
-          return `<div class="sea-option-line">${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))} · ~${formatDuration(l.hours * 3600)} · ${price}<div class="muted">${t('sea_' + l.freq)}${l.noCars ? ` · ${t('sea_no_cars')}` : ""}</div></div>`;
+          return `${transfer}<div class="sea-option-line">${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))} · ~${formatDuration(l.hours * 3600)} · ${price}<div class="muted">${t('sea_' + l.freq)}${l.noCars ? ` · ${t('sea_no_cars')}` : ""}</div></div>`;
         }).join("");
         return `<label class="sea-option${j === seg.selected ? " selected" : ""}">
           <input type="radio" name="sea_${i}" ${j === seg.selected ? "checked" : ""} onchange="selectSeaOption(${i},${j})">
@@ -823,7 +832,7 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
     card.className = "leg-card";
     card.innerHTML = `
       <div class="leg-head" onclick="toggleLeg(this)">
-        <div><h3>${placeName(fromPlace) === placeName(toPlace) ? `${t('leg_from_port')}: ${escapeHtml(placeName(toPlace))}` : `${escapeHtml(placeName(fromPlace))} → ${escapeHtml(placeName(toPlace))}`}</h3><p>${leg.distance === 0 ? t('leg_at_port') : `${legKm.toFixed(1)} ${t('unit_km')} • ${formatDuration(legSec)}`}</p></div>
+        <div><h3>${placeName(fromPlace) === placeName(toPlace) || leg.distance === 0 ? `${t('leg_from_port')}: ${escapeHtml(placeName(toPlace))}` : `${escapeHtml(placeName(fromPlace))} → ${escapeHtml(placeName(toPlace))}`}</h3><p>${leg.distance === 0 ? t('leg_at_port') : `${legKm.toFixed(1)} ${t('unit_km')} • ${formatDuration(legSec)}`}</p></div>
         <div>▾</div>
       </div>
       <div class="leg-body">

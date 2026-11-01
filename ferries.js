@@ -174,6 +174,7 @@ function findIslandsByPrefix(text) { const k = normalizeName(text); return k.len
 const ROAD_DETOUR = 1.3;
 const ROAD_KMH = 70;
 const BOARDING_HOURS = 1;
+const MAX_FERRIES = 3;
 
 function islandAt(lat, lon) {
   for (const [id, [latMin, latMax, lonMin, lonMax]] of Object.entries(ISLANDS)) {
@@ -191,38 +192,46 @@ function haversineKm(a, b) {
 
 function roadHoursEstimate(a, b) { return haversineKm(a, b) * ROAD_DETOUR / ROAD_KMH; }
 
-// Επιστρέφει [{ from, to, hours, price, freq, noCars }, ...] για ένα ή δύο πλοία.
 function linesFrom(portId) {
   return FERRY_LINES.filter(l => l.a === portId || l.b === portId)
     .map(l => ({ ...l, from: portId, to: l.a === portId ? l.b : l.a }));
 }
 
+// Επιστρέφει επιλογές με όσο το δυνατόν λιγότερα πλοία: [[{ from, to, hours, price, freq, noCars }, ...], ...]
 function findSeaPaths(from, to, maxOptions = 3) {
   const fromIsland = islandAt(from.lat, from.lon);
   const toIsland = islandAt(to.lat, to.lon);
   const portsOf = island => Object.keys(PORTS).filter(id => PORTS[id].island === island);
-  const endPorts = new Set(portsOf(toIsland));
 
-  const direct = [], withTransfer = [];
-  for (const start of portsOf(fromIsland)) {
-    for (const first of linesFrom(start)) {
-      if (endPorts.has(first.to)) { direct.push([first]); continue; }
-      if (PORTS[first.to].island === fromIsland) continue;
-      for (const second of linesFrom(first.to)) {
-        if (second.to !== start && endPorts.has(second.to)) withTransfer.push([first, second]);
+  // Το επόμενο πλοίο μπορεί να φεύγει από άλλο λιμάνι της ίδιας στεριάς, με δρόμο ανάμεσά τους.
+  function pathsWith(count, land, visited) {
+    const paths = [];
+    for (const port of portsOf(land)) {
+      for (const line of linesFrom(port)) {
+        const nextLand = PORTS[line.to].island;
+        if (visited.includes(nextLand)) continue;
+        if (count === 1) { if (nextLand === toIsland) paths.push([line]); continue; }
+        if (nextLand === toIsland) continue;
+        for (const rest of pathsWith(count - 1, nextLand, [...visited, nextLand])) paths.push([line, ...rest]);
       }
     }
+    return paths;
   }
 
-  // Μετεπιβίβαση προτείνεται μόνο όταν δεν υπάρχει απευθείας πλοίο.
   const score = lines => roadHoursEstimate(from, PORTS[lines[0].from])
-    + lines.reduce((s, l) => s + l.hours + BOARDING_HOURS, 0)
+    + lines.reduce((s, l, i) => s + l.hours + BOARDING_HOURS + (i > 0 ? roadHoursEstimate(PORTS[lines[i - 1].to], PORTS[l.from]) : 0), 0)
     + roadHoursEstimate(PORTS[lines[lines.length - 1].to], to);
-  const candidates = direct.length ? direct : withTransfer;
-  return candidates.map(lines => ({ lines, score: score(lines) }))
-    .sort((x, y) => x.score - y.score)
-    .slice(0, maxOptions)
-    .map(c => c.lines);
+
+  for (let count = 1; count <= MAX_FERRIES; count++) {
+    const paths = pathsWith(count, fromIsland, [fromIsland]);
+    if (paths.length) {
+      return paths.map(lines => ({ lines, score: score(lines) }))
+        .sort((x, y) => x.score - y.score)
+        .slice(0, maxOptions)
+        .map(c => c.lines);
+    }
+  }
+  return [];
 }
 
 if (typeof module !== "undefined") module.exports = { ISLANDS, PORTS, FERRY_LINES, ISLAND_NAMES, islandAt, findSeaPaths, haversineKm, findIslandExact, findIslandsByPrefix };
