@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://greek-travel-planner.netlify.app/sitemap.xml
