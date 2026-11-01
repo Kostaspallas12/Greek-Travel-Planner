@@ -40,8 +40,6 @@ const T = {
     guide_where:'Πού θες να πας;', guide_dest:'Προορισμός',
     guide_dest_ph:'π.χ. Αθήνα, Θεσσαλονίκη, Ρόδος...',
     guide_days:'Ημέρες παραμονής', guide_days_ph:'π.χ. 3',
-    guide_budget:'Προϋπολογισμός/μέρα',
-    guide_budget_eco:'€ Οικονομικό', guide_budget_mid:'€€ Μεσαίο', guide_budget_lux:'€€€ Premium',
     guide_interests:'Ενδιαφέροντα',
     p_food:'🍽️ Φαγητό', p_sights:'🏛️ Αξιοθέατα', p_nature:'🌿 Φύση',
     p_night:'🎉 Νυχτερινή ζωή', p_shop:'🛍️ Ψώνια', p_beach:'🏖️ Παραλία',
@@ -63,6 +61,7 @@ const T = {
     no_location:'Δεν βρέθηκε τοποθεσία στην Ελλάδα για',
     no_route:'Δεν βρέθηκε διαδρομή.',
     empty_field:'Υπάρχει κενό πεδίο στη διαδρομή.',
+    pick_from_list:'Δεν είμαστε σίγουροι ποιο μέρος εννοείς. Διάλεξέ το από τη λίστα προτάσεων',
     no_road_route:'Δεν βρέθηκε οδική διαδρομή. Αν ο προορισμός είναι μικρό νησί, δεν υπάρχει ακόμα στα δρομολόγια της εφαρμογής.',
     no_sea_route:'Δεν βρέθηκε ακτοπλοϊκή σύνδεση στα δρομολόγια της εφαρμογής για',
     sea_title:'⛴️ Επίλεξε πώς θα πας', sea_ferry:'Πλοίο', sea_road:'οδικά', sea_total:'συνολικά',
@@ -108,8 +107,6 @@ const T = {
     guide_where:'Where do you want to go?', guide_dest:'Destination',
     guide_dest_ph:'e.g. Athens, Thessaloniki, Rhodes...',
     guide_days:'Days of stay', guide_days_ph:'e.g. 3',
-    guide_budget:'Budget/day',
-    guide_budget_eco:'€ Budget', guide_budget_mid:'€€ Mid-range', guide_budget_lux:'€€€ Premium',
     guide_interests:'Interests',
     p_food:'🍽️ Food', p_sights:'🏛️ Sights', p_nature:'🌿 Nature',
     p_night:'🎉 Nightlife', p_shop:'🛍️ Shopping', p_beach:'🏖️ Beach',
@@ -131,6 +128,7 @@ const T = {
     no_location:'No location found in Greece for',
     no_route:'No route found.',
     empty_field:'A route field is empty.',
+    pick_from_list:'We are not sure which place you mean. Please choose it from the suggestions',
     no_road_route:'No road route found. If your destination is a small island, it is not in the app\'s ferry lines yet.',
     no_sea_route:'No ferry connection in the app\'s ferry lines for',
     sea_title:'⛴️ Choose how to get there', sea_ferry:'Ferry', sea_road:'by road', sea_total:'in total',
@@ -293,6 +291,8 @@ window.toggleTollCard = function() {
   if (icon) icon.textContent = body.classList.contains("open") ? "▴" : "▾";
 };
 
+function stationDomId(hw, st) { return `${hw.id}_${hw.stations.indexOf(st)}`; }
+
 function renderTollPicker(vehicleKey) {
   tollState.vehicleKey = vehicleKey;
   tollState.checkedStations = {};
@@ -315,7 +315,7 @@ function renderTollPicker(vehicleKey) {
           <div class="toll-stations-inner">
             ${hw.stations.map(st => {
               const k = `${hw.id}__${st.name}`;
-              const safeId = k.replace(/[^a-z0-9]/gi, '_');
+              const safeId = stationDomId(hw, st);
               return `<label class="toll-st-row" for="st_${safeId}">
                 <input type="checkbox" id="st_${safeId}" data-key="${escapeHtml(k)}" onchange="onStationChange(this)">
                 <span class="toll-st-name" id="stname_${safeId}">${escapeHtml(st.name)}</span>
@@ -385,7 +385,7 @@ function refreshTollUI() {
     if (hw.stations.length > 1) {
       hw.stations.forEach(st => {
         const k = `${hw.id}__${st.name}`;
-        const safeId = k.replace(/[^a-z0-9]/gi, '_');
+        const safeId = stationDomId(hw, st);
         const cb = qs(`st_${safeId}`);
         if (cb) cb.checked = !!tollState.checkedStations[k];
         const nm = qs(`stname_${safeId}`);
@@ -445,16 +445,42 @@ async function getWeather(lat, lon, date) {
 function weatherIcon(c) { if(c===0)return"☀️"; if(c<=2)return"🌤️"; if(c<=3)return"☁️"; if(c<=48)return"🌫️"; if(c<=57)return"🌦️"; if(c<=67)return"🌧️"; if(c<=77)return"❄️"; if(c<=82)return"🌧️"; if(c<=86)return"🌨️"; return"⛈️"; }
 function weatherDescription(c) { if(c===0)return t('w_clear'); if(c<=2)return t('w_few_clouds'); if(c<=3)return t('w_cloudy'); if(c<=48)return t('w_fog'); if(c<=57)return t('w_drizzle'); if(c<=67)return t('w_rain'); if(c<=77)return t('w_snow'); if(c<=82)return t('w_showers'); if(c<=86)return t('w_sleet'); return t('w_storm'); }
 
+// Πρώτα οι πόλεις, μετά οι περιοχές και στο τέλος δρόμοι και καταστήματα.
+const SUGGESTION_ORDER = ["city", "suburb", "county", "state", "postcode", "street", "building", "amenity"];
+function suggestionRank(item) { const i = SUGGESTION_ORDER.indexOf(item.result_type); return i < 0 ? SUGGESTION_ORDER.length : i; }
+
+function islandName(island) { return island[currentLang] || island.el; }
+function islandPlace(island) { const p = PORTS[island.port]; return { name: islandName(island), label: islandName(island), lat: p.lat, lon: p.lon }; }
+
 async function searchCitySuggestions(text) {
-  const url = `${GEOAPIFY_PROXY}?endpoint=autocomplete&text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=5`;
-  return (await apiJson(url)).results || [];
+  const url = `${GEOAPIFY_PROXY}?endpoint=autocomplete&text=${encodeURIComponent(text)}&filter=countrycode:gr&format=json&limit=8`;
+  const results = ((await apiJson(url)).results || []).sort((a, b) => suggestionRank(a) - suggestionRank(b));
+  const islands = findIslandsByPrefix(text).map(island => { const p = islandPlace(island); return { name: p.name, formatted: p.label, lat: p.lat, lon: p.lon }; });
+  return [...islands, ...results].slice(0, 5);
+}
+
+const ACCEPTED_TYPES = ["city", "county", "state", "street", "building"];
+const MIN_CONFIDENCE = 0.8;
+const SAME_PLACE_KM = 20;
+
+// Το geocoding επιστρέφει πάντα κάτι στην Ελλάδα (το «Paris» είναι κατάστημα στα Ιωάννινα),
+// οπότε κρατάμε μόνο σίγουρα αποτελέσματα και για τα υπόλοιπα ζητάμε επιλογή από τη λίστα.
+function pickConfidentResult(results) {
+  const top = results[0];
+  if (!ACCEPTED_TYPES.includes(top.result_type) || (top.rank?.confidence ?? 0) < MIN_CONFIDENCE) return null;
+  const sameNameCities = results.filter(r => r.result_type === "city" && r.rank?.match_type === "full_match" && (r.rank?.confidence ?? 0) >= 0.9);
+  const ambiguous = sameNameCities.some(r => haversineKm(top, r) > SAME_PLACE_KM);
+  return ambiguous ? null : top;
 }
 
 async function geocodePlace(text) {
-  const url = `${GEOAPIFY_PROXY}?endpoint=search&text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=1`;
+  const island = findIslandExact(text);
+  if (island) return islandPlace(island);
+  const url = `${GEOAPIFY_PROXY}?endpoint=search&text=${encodeURIComponent(text+", Greece")}&filter=countrycode:gr&format=json&limit=5`;
   const data = await apiJson(url);
   if (!data.results?.length) throw new Error(`${t('no_location')}: ${text}`);
-  const item = data.results[0];
+  const item = pickConfidentResult(data.results);
+  if (!item) { const err = new Error(`${t('pick_from_list')}: ${text}`); err.needsPick = true; throw err; }
   return { name: item.city||item.town||item.village||item.suburb||item.name||item.other_names?.name||item.state||text, label: item.formatted||item.address_line1||text, lat: item.lat, lon: item.lon };
 }
 
@@ -463,7 +489,8 @@ async function resolvePlaceFromInput(input) {
   if (!value) throw new Error(t('empty_field'));
   const { label, lat, lon, name } = input.dataset;
   if (label && lat && lon && value === label) return { name: name||value, label, lat: Number(lat), lon: Number(lon) };
-  return geocodePlace(value);
+  try { return await geocodePlace(value); }
+  catch (err) { if (err.needsPick) input.focus(); throw err; }
 }
 
 async function getRoute(places, { avoidFerries = false } = {}) {
@@ -480,10 +507,10 @@ function createAutocomplete(input) {
   if (!list) return;
   const run = debounce(async () => {
     const q = input.value.trim();
-    input.dataset.lat = input.dataset.lon = input.dataset.label = input.dataset.name = "";
     if (q.length < 2) { list.style.display = "none"; list.innerHTML = ""; return; }
     try {
       const suggestions = await searchCitySuggestions(q);
+      if (q !== input.value.trim() || input.dataset.lat) return;
       if (!suggestions.length) { list.style.display = "none"; list.innerHTML = ""; return; }
       list.innerHTML = suggestions.map(item => {
         const main = item.city||item.town||item.village||item.suburb||item.name||item.other_names?.name||item.formatted||q;
@@ -496,8 +523,8 @@ function createAutocomplete(input) {
       });
     } catch (err) { list.style.display = "none"; list.innerHTML = ""; console.error(err); }
   }, 250);
-  input.addEventListener("input", run);
-  input.addEventListener("focus", run);
+  input.addEventListener("input", () => { input.dataset.lat = input.dataset.lon = input.dataset.label = input.dataset.name = ""; run(); });
+  input.addEventListener("focus", () => { if (!input.dataset.lat) run(); });
   input.addEventListener("blur", () => setTimeout(() => { list.style.display = "none"; }, 150));
 }
 
@@ -529,10 +556,16 @@ async function fetchRoadLegs(places) {
   return (route.legs || []).map((leg, i) => ({ type: "road", from: places[i], to: places[i+1], distance: leg.distance, time: leg.time, ferry: !!route.ferry }));
 }
 
+// Όταν το σημείο είναι το ίδιο το λιμάνι (π.χ. επιλογή «Λέσβος») δεν χρειάζεται κλήση στον router.
+async function roadLegsBetween(a, b) {
+  if (haversineKm(a, b) < 0.3) return [{ type: "road", from: a, to: b, distance: 0, time: 0, ferry: false }];
+  return fetchRoadLegs([a, b]);
+}
+
 async function buildSeaOption(from, to, lines) {
   const firstPort = portPlace(lines[0].from);
   const lastPort = portPlace(lines[lines.length-1].to);
-  const [toPort, fromPort] = await Promise.all([fetchRoadLegs([from, firstPort]), fetchRoadLegs([lastPort, to])]);
+  const [toPort, fromPort] = await Promise.all([roadLegsBetween(from, firstPort), roadLegsBetween(lastPort, to)]);
   return { lines, legs: [...toPort, ...lines.map(line => ({ type: "ferry", line })), ...fromPort] };
 }
 
@@ -755,18 +788,18 @@ async function handleSearch() {
 const GUIDE_CAT_ICONS = {
   'catering.restaurant': '🍽️', 'catering.cafe': '☕', 'catering.bar': '🍻',
   'catering.fast_food': '🍔', 'tourism.attraction': '🏛️', 'tourism.sights': '🗺️',
-  'entertainment.museum': '🏺', 'entertainment.nightclub': '🎉',
+  'entertainment.museum': '🏺', 'adult.nightclub': '🎉',
   'leisure.park': '🌿', 'natural': '🌲', 'commercial.shopping_mall': '🛍️',
-  'commercial': '🛒', 'leisure.beach_resort': '🏖️', 'natural.water': '🌊',
+  'commercial': '🛒', 'beach': '🏖️', 'natural.water': '🌊',
 };
 
 const GUIDE_CAT_LABELS = {
   'catering.restaurant': 'Εστιατόριο', 'catering.cafe': 'Καφέ', 'catering.bar': 'Μπαρ',
   'catering.fast_food': 'Fast food', 'tourism.attraction': 'Αξιοθέατο',
   'tourism.sights': 'Αξιοθέατο', 'entertainment.museum': 'Μουσείο',
-  'entertainment.nightclub': 'Νυχτερινό κέντρο', 'leisure.park': 'Πάρκο',
+  'adult.nightclub': 'Νυχτερινό κέντρο', 'leisure.park': 'Πάρκο',
   'natural': 'Φύση', 'commercial.shopping_mall': 'Εμπορικό κέντρο',
-  'commercial': 'Κατάστημα', 'leisure.beach_resort': 'Παραλία', 'natural.water': 'Παραλία / Θαλάσσιο',
+  'commercial': 'Κατάστημα', 'beach': 'Παραλία', 'natural.water': 'Παραλία / Θαλάσσιο',
 };
 
 function guideCatIcon(cat) {
@@ -810,12 +843,7 @@ async function handleGuideSearch() {
   try {
     showLoader(true);
 
-    let place;
-    if (destInput.dataset.lat && destInput.dataset.lon && destInput.value === destInput.dataset.label) {
-      place = { name: destInput.dataset.name || destInput.value, lat: +destInput.dataset.lat, lon: +destInput.dataset.lon };
-    } else {
-      place = await geocodePlace(destInput.value.trim());
-    }
+    const place = await resolvePlaceFromInput(destInput);
 
     const limit = Math.max(4, Math.ceil(days * 4 / interests.length) + 2);
     const groups = await Promise.all(interests.map(cats => fetchGuidePlaces(place.lat, place.lon, cats, limit)));

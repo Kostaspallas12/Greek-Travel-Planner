@@ -313,24 +313,11 @@
       </div>
 
       <div class="igc" style="margin-bottom:20px;">
-        <div class="igc-half">
-          <div class="igc-row">
-            <span class="igc-icon">📅</span>
-            <div class="igc-field">
-              <span class="igc-label" data-i18n="guide_days">Ημέρες παραμονής</span>
-              <input class="igc-input" id="guideDays" type="number" min="1" max="14" placeholder="π.χ. 3" data-i18n-placeholder="guide_days_ph">
-            </div>
-          </div>
-          <div class="igc-row">
-            <span class="igc-icon">💰</span>
-            <div class="igc-field">
-              <span class="igc-label" data-i18n="guide_budget">Προϋπολογισμός/μέρα</span>
-              <select class="igc-input" id="guideBudget">
-                <option value="budget" data-i18n="guide_budget_eco">€ Οικονομικό</option>
-                <option value="mid" selected data-i18n="guide_budget_mid">€€ Μεσαίο</option>
-                <option value="luxury" data-i18n="guide_budget_lux">€€€ Premium</option>
-              </select>
-            </div>
+        <div class="igc-row">
+          <span class="igc-icon">📅</span>
+          <div class="igc-field">
+            <span class="igc-label" data-i18n="guide_days">Ημέρες παραμονής</span>
+            <input class="igc-input" id="guideDays" type="number" min="1" max="14" placeholder="π.χ. 3" data-i18n-placeholder="guide_days_ph">
           </div>
         </div>
       </div>
@@ -350,7 +337,7 @@
           <span data-i18n="p_nature">🌿 Φύση</span>
         </label>
         <label class="interest-pill">
-          <input type="checkbox" value="entertainment.nightclub,catering.bar" name="interest">
+          <input type="checkbox" value="adult.nightclub,catering.bar" name="interest">
           <span data-i18n="p_night">🎉 Νυχτερινή ζωή</span>
         </label>
         <label class="interest-pill">
@@ -358,7 +345,7 @@
           <span data-i18n="p_shop">🛍️ Ψώνια</span>
         </label>
         <label class="interest-pill">
-          <input type="checkbox" value="leisure.beach_resort,natural.water" name="interest">
+          <input type="checkbox" value="beach,natural.water" name="interest">
           <span data-i18n="p_beach">🏖️ Παραλία</span>
         </label>
       </div>

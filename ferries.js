@@ -116,6 +116,34 @@ const FERRY_LINES = [
   ["rhodes", "kos", 4, null, "daily"], ["mykonos", "santorini", 2.5, null, "daily"],
 ].map(([a, b, hours, price, freq, noCars]) => ({ a, b, hours, price, freq, noCars: !!noCars }));
 
+// Τα νησιά δεν βγαίνουν αξιόπιστα από το geocoding (π.χ. το «Λέσβος» φέρνει ουζερί στην Αθήνα).
+const ISLAND_NAMES = [
+  { el: "Κρήτη", en: "Crete", port: "heraklion", alt: ["kriti"] }, { el: "Ρόδος", en: "Rhodes", port: "rhodes", alt: ["rodos"] },
+  { el: "Κως", en: "Kos", port: "kos" }, { el: "Κάλυμνος", en: "Kalymnos", port: "kalymnos" },
+  { el: "Λέρος", en: "Leros", port: "leros" }, { el: "Πάτμος", en: "Patmos", port: "patmos" },
+  { el: "Αστυπάλαια", en: "Astypalea", port: "astypalea" }, { el: "Κάρπαθος", en: "Karpathos", port: "karpathos" },
+  { el: "Λέσβος", en: "Lesvos", port: "mytilene", alt: ["lesbos"] }, { el: "Χίος", en: "Chios", port: "chios", alt: ["hios"] },
+  { el: "Σάμος", en: "Samos", port: "samos" }, { el: "Ικαρία", en: "Ikaria", port: "ikaria" },
+  { el: "Λήμνος", en: "Limnos", port: "limnos", alt: ["lemnos"] }, { el: "Θάσος", en: "Thassos", port: "limenas", alt: ["thasos"] },
+  { el: "Σαμοθράκη", en: "Samothraki", port: "samothraki" }, { el: "Σαντορίνη", en: "Santorini", port: "santorini", alt: ["θηρα", "thira"] },
+  { el: "Μύκονος", en: "Mykonos", port: "mykonos" }, { el: "Πάρος", en: "Paros", port: "paros" },
+  { el: "Νάξος", en: "Naxos", port: "naxos" }, { el: "Σύρος", en: "Syros", port: "syros" },
+  { el: "Μήλος", en: "Milos", port: "milos" }, { el: "Άνδρος", en: "Andros", port: "andros" },
+  { el: "Τήνος", en: "Tinos", port: "tinos" }, { el: "Κέα", en: "Kea", port: "kea", alt: ["τζια", "tzia"] },
+  { el: "Κύθνος", en: "Kythnos", port: "kythnos" }, { el: "Αίγινα", en: "Aegina", port: "aegina", alt: ["aigina"] },
+  { el: "Ύδρα", en: "Hydra", port: "hydra", alt: ["ydra"] }, { el: "Σπέτσες", en: "Spetses", port: "spetses" },
+  { el: "Σκιάθος", en: "Skiathos", port: "skiathos" }, { el: "Σκόπελος", en: "Skopelos", port: "skopelos" },
+  { el: "Αλόννησος", en: "Alonissos", port: "alonissos", alt: ["αλονησος", "alonnisos"] }, { el: "Σκύρος", en: "Skyros", port: "skyros" },
+  { el: "Κέρκυρα", en: "Corfu", port: "corfu", alt: ["kerkyra"] }, { el: "Παξοί", en: "Paxi", port: "paxi", alt: ["paxos"] },
+  { el: "Κεφαλονιά", en: "Kefalonia", port: "sami", alt: ["kefallonia", "cephalonia"] }, { el: "Ιθάκη", en: "Ithaca", port: "ithaca", alt: ["ithaki"] },
+  { el: "Ζάκυνθος", en: "Zakynthos", port: "zakynthos", alt: ["zante"] },
+];
+
+function normalizeName(str) { return String(str || "").toLowerCase().trim().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ς/g, "σ"); }
+function islandNames(island) { return [island.el, island.en, ...(island.alt || [])].map(normalizeName); }
+function findIslandExact(text) { const k = normalizeName(text); return ISLAND_NAMES.find(i => islandNames(i).includes(k)); }
+function findIslandsByPrefix(text) { const k = normalizeName(text); return k.length < 2 ? [] : ISLAND_NAMES.filter(i => islandNames(i).some(n => n.startsWith(k))); }
+
 // ─── SEA PLANNER ─────────────────────────────────────────────────────────────
 
 const ROAD_DETOUR = 1.3;
@@ -172,4 +200,4 @@ function findSeaPaths(from, to, maxOptions = 3) {
     .map(c => c.lines);
 }
 
-if (typeof module !== "undefined") module.exports = { ISLANDS, PORTS, FERRY_LINES, islandAt, findSeaPaths };
+if (typeof module !== "undefined") module.exports = { ISLANDS, PORTS, FERRY_LINES, ISLAND_NAMES, islandAt, findSeaPaths, haversineKm, findIslandExact, findIslandsByPrefix };
