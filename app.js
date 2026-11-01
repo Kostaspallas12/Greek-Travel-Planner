@@ -61,6 +61,17 @@ const T = {
     no_location:'Δεν βρέθηκε τοποθεσία στην Ελλάδα για',
     no_route:'Δεν βρέθηκε διαδρομή.',
     empty_field:'Υπάρχει κενό πεδίο στη διαδρομή.',
+    loading_guide:'Δημιουργία προγράμματος...',
+    err_people:'Τα άτομα πρέπει να είναι ακέραιος αριθμός, από 1 και πάνω.',
+    err_fuel:'Συμπλήρωσε κατανάλωση και τιμή βενζίνης με αριθμούς μεγαλύτερους από το 0, για να υπολογιστεί το κόστος.',
+    err_negative:'Το φαγητό και οι είσοδοι δεν μπορούν να έχουν αρνητική τιμή.',
+    err_past_date:'Η αναχώρηση δεν μπορεί να είναι σε παρελθοντική ημερομηνία.',
+    err_no_depart:'Συμπλήρωσε και την ημερομηνία αναχώρησης.',
+    err_return_before:'Η επιστροφή δεν μπορεί να είναι πριν από την αναχώρηση.',
+    err_same_place:'Η αφετηρία και ο επόμενος προορισμός είναι το ίδιο μέρος',
+    err_guide_days:'Οι ημέρες παραμονής πρέπει να είναι ακέραιος αριθμός από 1 έως 14.',
+    guide_fewer:(found, days) => `Βρέθηκαν μέρη για ${found} από τις ${days} ημέρες. Δοκίμασε περισσότερα ενδιαφέροντα.`,
+    weather_later:'Η πρόγνωση καιρού εμφανίζεται έως 16 ημέρες πριν από το ταξίδι.',
     pick_from_list:'Δεν είμαστε σίγουροι ποιο μέρος εννοείς. Διάλεξέ το από τη λίστα προτάσεων',
     no_road_route:'Δεν βρέθηκε οδική διαδρομή. Αν ο προορισμός είναι μικρό νησί, δεν υπάρχει ακόμα στα δρομολόγια της εφαρμογής.',
     no_sea_route:'Δεν βρέθηκε ακτοπλοϊκή σύνδεση στα δρομολόγια της εφαρμογής για',
@@ -128,6 +139,17 @@ const T = {
     no_location:'No location found in Greece for',
     no_route:'No route found.',
     empty_field:'A route field is empty.',
+    loading_guide:'Creating your itinerary...',
+    err_people:'People must be a whole number, 1 or more.',
+    err_fuel:'Enter fuel consumption and fuel price as numbers above 0, so the cost can be calculated.',
+    err_negative:'Food and entries cannot have a negative price.',
+    err_past_date:'The departure date cannot be in the past.',
+    err_no_depart:'Please enter a departure date as well.',
+    err_return_before:'The return date cannot be before the departure date.',
+    err_same_place:'The start and next destination are the same place',
+    err_guide_days:'Days of stay must be a whole number from 1 to 14.',
+    guide_fewer:(found, days) => `We found places for ${found} of your ${days} days. Try adding more interests.`,
+    weather_later:'The weather forecast appears up to 16 days before your trip.',
     pick_from_list:'We are not sure which place you mean. Please choose it from the suggestions',
     no_road_route:'No road route found. If your destination is a small island, it is not in the app\'s ferry lines yet.',
     no_sea_route:'No ferry connection in the app\'s ferry lines for',
@@ -421,7 +443,7 @@ function greekKey(str) { return String(str || "").toLowerCase().trim().normalize
 function getPoiForCity(name) { const k = greekKey(name); return POI_BY_CITY[k] || { sights: [{ name: "Κεντρική πλατεία", desc: "Καλή πρώτη στάση για βόλτα" }], food: [{ name: "Τοπική ταβέρνα", desc: "Δοκίμασε τοπική κουζίνα" }] }; }
 function showError(msg) { const b = qs("errorBox"); if (!b) return; b.textContent = msg; b.style.display = "block"; }
 function clearError() { const b = qs("errorBox"); if (!b) return; b.textContent = ""; b.style.display = "none"; }
-function showLoader(on) { const l = qs("loader"); if (!l) return; l.style.display = on ? "flex" : "none"; }
+function showLoader(on, textKey = "loading") { const l = qs("loader"); if (!l) return; const text = l.querySelector(".loading-text"); if (on && text) text.textContent = t(textKey); l.style.display = on ? "flex" : "none"; }
 function formatDate(v) { if (!v) return null; const [y,m,d] = v.split("-"); return `${d}/${m}/${y}`; }
 function formatDuration(s) { const tm = Math.round(s/60); const h = Math.floor(tm/60); const m = tm%60; if (h<=0) return `${m}λ`; if (m===0) return `${h}ω`; return `${h}ω ${m}λ`; }
 function euro(v) { return `${Number(v||0).toFixed(2)}€`; }
@@ -432,9 +454,18 @@ function escapeHtml(s) { return String(s||"").replaceAll("&","&amp;").replaceAll
 
 async function apiJson(url) { const r = await fetch(url); const d = await r.json(); if (!r.ok) throw new Error(d?.message||`HTTP ${r.status}`); return d; }
 function debounce(fn, delay=300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn(...a), delay); }; }
-function todayIso() { return new Date().toISOString().split("T")[0]; }
+function todayIso() { return isoDate(new Date()); }
+function isoDate(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0]; }
+
+const FORECAST_DAYS = 16;
+function hasForecast(date) {
+  const last = new Date();
+  last.setDate(last.getDate() + FORECAST_DAYS - 1);
+  return date >= todayIso() && date <= isoDate(last);
+}
 
 async function getWeather(lat, lon, date) {
+  if (!hasForecast(date)) return null;
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum&timezone=auto&start_date=${date}&end_date=${date}`;
     const data = await fetch(url).then(r=>r.json());
@@ -510,7 +541,7 @@ function createAutocomplete(input) {
     if (q.length < 2) { list.style.display = "none"; list.innerHTML = ""; return; }
     try {
       const suggestions = await searchCitySuggestions(q);
-      if (q !== input.value.trim() || input.dataset.lat) return;
+      if (q !== input.value.trim() || input.dataset.lat || document.activeElement !== input) return;
       if (!suggestions.length) { list.style.display = "none"; list.innerHTML = ""; return; }
       list.innerHTML = suggestions.map(item => {
         const main = item.city||item.town||item.village||item.suburb||item.name||item.other_names?.name||item.formatted||q;
@@ -724,6 +755,8 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true }
     let weatherHtml = "";
     if (weather) {
       weatherHtml = `<div class="place-item weather-item"><strong>${t('leg_weather')} ${formatDate(weatherDate)}</strong><div class="weather-details"><span class="weather-icon">${weatherIcon(weather.code)}</span><span class="weather-desc">${weatherDescription(weather.code)}</span><span class="weather-temp"><span class="temp-max">↑${weather.maxTemp}°</span><span class="temp-min">↓${weather.minTemp}°</span></span>${weather.precipitation>0?`<span class="weather-rain">🌧 ${weather.precipitation.toFixed(1)}mm</span>`:""}</div></div>`;
+    } else if (!hasForecast(weatherDate)) {
+      weatherHtml = `<div class="place-item"><strong>${t('leg_weather')} ${formatDate(weatherDate)}</strong><div class="muted">${t('weather_later')}</div></div>`;
     }
 
     const card = document.createElement("div");
@@ -752,22 +785,39 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true }
   if (qs("results")) { qs("results").style.display = "block"; if (scroll) qs("results").scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
 
+// Επιστρέφει τις ρυθμίσεις ή πετάει σφάλμα με το μήνυμα για τον χρήστη.
+function readSettings() {
+  const raw = id => (qs(id)?.value ?? "").trim();
+  const people = raw("people") === "" ? 1 : Number(raw("people"));
+  if (!Number.isInteger(people) || people < 1) throw new Error(t('err_people'));
+  const fuelConsumption = Number(raw("fuelConsumption"));
+  const fuelPrice = Number(raw("fuelPrice"));
+  if (!(fuelConsumption > 0) || !(fuelPrice > 0)) throw new Error(t('err_fuel'));
+  const foodPerStop = Number(raw("foodPerStop") || 0);
+  const entryPerStop = Number(raw("entryPerStop") || 0);
+  if (foodPerStop < 0 || entryPerStop < 0) throw new Error(t('err_negative'));
+  return { vehicleMultiplier: Number(qs("vehicleType")?.value || 1.0), people, fuelConsumption, fuelPrice, foodPerStop, entryPerStop };
+}
+
+function validateDates(dateFrom, dateTo) {
+  if (dateTo && !dateFrom) throw new Error(t('err_no_depart'));
+  if (dateFrom && dateFrom < todayIso()) throw new Error(t('err_past_date'));
+  if (dateFrom && dateTo && dateTo < dateFrom) throw new Error(t('err_return_before'));
+}
+
 async function handleSearch() {
   clearError();
+  if (qs("results")) qs("results").style.display = "none";
   const { originInput, destinationInput, stopInputs } = collectRouteInputs();
   if (!originInput || !destinationInput) { showError(t('err_missing_fields')); return; }
   if (!originInput.value.trim() || !destinationInput.value.trim()) { showError(t('err_fill_route')); return; }
 
-  const vehicleMultiplier = Number(qs("vehicleType")?.value || 1.0);
-  const settings = {
-    vehicleMultiplier,
-    people: Math.max(1, Number(qs("people")?.value || 1)),
-    fuelConsumption: Math.max(0, Number(qs("fuelConsumption")?.value || 0)),
-    fuelPrice: Math.max(0, Number(qs("fuelPrice")?.value || 0)),
-    foodPerStop: Math.max(0, Number(qs("foodPerStop")?.value || 0)),
-    entryPerStop: Math.max(0, Number(qs("entryPerStop")?.value || 0))
-  };
   const tripInfo = { dateFrom: qs("dateFrom")?.value||"", dateTo: qs("dateTo")?.value||"", notes: qs("notes")?.value.trim()||"" };
+  let settings;
+  try {
+    settings = readSettings();
+    validateDates(tripInfo.dateFrom, tripInfo.dateTo);
+  } catch (err) { showError(err.message); return; }
 
   try {
     showLoader(true);
@@ -775,6 +825,8 @@ async function handleSearch() {
     places.push(await resolvePlaceFromInput(originInput));
     for (const input of stopInputs) { if (input.value.trim()) places.push(await resolvePlaceFromInput(input)); }
     places.push(await resolvePlaceFromInput(destinationInput));
+    const repeated = places.find((p, i) => i > 0 && haversineKm(places[i-1], p) < 0.3);
+    if (repeated) throw new Error(`${t('err_same_place')}: ${repeated.name}`);
     const plan = await buildTripPlan(places);
     await renderResults({ places, plan, settings, tripInfo });
   } catch (err) {
@@ -802,27 +854,42 @@ const GUIDE_CAT_LABELS = {
   'commercial': 'Κατάστημα', 'beach': 'Παραλία', 'natural.water': 'Παραλία / Θαλάσσιο',
 };
 
-function guideCatIcon(cat) {
-  if (!cat) return '📍';
-  for (const [k, v] of Object.entries(GUIDE_CAT_ICONS)) { if (cat.startsWith(k)) return v; }
-  return '📍';
+function guideCatIcon(cat) { return GUIDE_CAT_ICONS[cat] || '📍'; }
+function guideCatLabel(cat) { return GUIDE_CAT_LABELS[cat] || ''; }
+
+// Το API δίνει τις κατηγορίες αλφαβητικά, οπότε κρατάμε την πιο συγκεκριμένη που γνωρίζουμε.
+function bestGuideCategory(categories) {
+  const known = Object.keys(GUIDE_CAT_LABELS).filter(k => categories.includes(k));
+  return known.sort((a, b) => b.length - a.length)[0] || '';
 }
 
-function guideCatLabel(cat) {
-  if (!cat) return '';
-  for (const [k, v] of Object.entries(GUIDE_CAT_LABELS)) { if (cat.startsWith(k)) return v; }
-  return cat.replace(/\./g, ' · ');
+const GUIDE_SKIP_NAME = /κυλικε|canteen|[Ѐ-ӿ]/i;
+const GUIDE_MINOR_SIGHTS = ["tourism.attraction.artwork", "tourism.sights.memorial"];
+
+// Όσο περισσότερα στοιχεία έχει ένα μέρος, τόσο πιο πιθανό είναι να αξίζει. Τα αγάλματα και οι προτομές μένουν πίσω.
+function guidePlaceScore(props) {
+  const raw = props.datasource?.raw || {};
+  const signals = [raw.wikidata || raw.wikipedia, raw.wikipedia, raw.website || raw["contact:website"], raw.phone || raw["contact:phone"], raw.opening_hours, raw.cuisine];
+  const isMinor = GUIDE_MINOR_SIGHTS.some(c => (props.categories || []).includes(c));
+  return signals.filter(Boolean).length - (isMinor ? 5 : 0);
 }
 
 async function fetchGuidePlaces(lat, lon, cats, limit) {
-  const url = `${GEOAPIFY_PROXY}?endpoint=places&categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&limit=${limit}`;
+  const fetchLimit = Math.max(40, limit * 2);
+  const url = `${GEOAPIFY_PROXY}?endpoint=places&categories=${encodeURIComponent(cats)}&filter=circle:${lon},${lat},15000&bias=proximity:${lon},${lat}&limit=${fetchLimit}`;
   try {
     const data = await apiJson(url);
-    return (data.features || []).map(f => ({
-      name: f.properties?.name,
-      address: f.properties?.address_line2 || f.properties?.city || '',
-      category: (f.properties?.categories || [])[0] || cats.split(',')[0],
-    })).filter(p => p.name && p.name.trim().length > 0);
+    const seen = new Set();
+    return (data.features || []).map(f => f.properties || {})
+      .filter(p => {
+        const key = normalizeName(p.name);
+        if (!key || GUIDE_SKIP_NAME.test(p.name) || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((p, order) => ({ order, score: guidePlaceScore(p), name: p.name, address: p.address_line2 || p.city || '', category: bestGuideCategory(p.categories || []) }))
+      .sort((a, b) => b.score - a.score || a.order - b.order)
+      .slice(0, limit);
   } catch { return []; }
 }
 
@@ -833,15 +900,17 @@ async function handleGuideSearch() {
   const showErr = msg => { if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; } };
   const clearErr = () => { if (errBox) { errBox.textContent = ''; errBox.style.display = 'none'; } };
   clearErr();
+  if (qs('guideResults')) qs('guideResults').style.display = 'none';
 
   if (!destInput?.value.trim()) { showErr(t('err_fill_dest')); return; }
 
-  const days = Math.min(14, Math.max(1, parseInt(daysInput?.value) || 3));
+  const days = daysInput?.value.trim() ? Number(daysInput.value) : 3;
+  if (!Number.isInteger(days) || days < 1 || days > 14) { showErr(t('err_guide_days')); return; }
   const interests = Array.from(document.querySelectorAll('input[name="interest"]:checked')).map(cb => cb.value);
   if (!interests.length) { showErr(t('err_select_interest')); return; }
 
   try {
-    showLoader(true);
+    showLoader(true, 'loading_guide');
 
     const place = await resolvePlaceFromInput(destInput);
 
@@ -862,7 +931,7 @@ async function handleGuideSearch() {
       if (chunk.length) dayPlans.push(chunk);
     }
 
-    renderGuideResults(place.name, dayPlans);
+    renderGuideResults(place.name, dayPlans, days);
   } catch (err) {
     console.error(err);
     if (errBox) { errBox.textContent = err.message || t('err_guide'); errBox.style.display = 'block'; }
@@ -871,7 +940,7 @@ async function handleGuideSearch() {
   }
 }
 
-function renderGuideResults(cityName, dayPlans) {
+function renderGuideResults(cityName, dayPlans, days) {
   const resultsEl = qs('guideResults');
   const titleEl = qs('guideResultsTitle');
   const cardsEl = qs('guideDayCards');
@@ -885,6 +954,13 @@ function renderGuideResults(cityName, dayPlans) {
     resultsEl.style.display = 'block';
     resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
+  }
+
+  if (dayPlans.length < days) {
+    const note = document.createElement('p');
+    note.className = 'guide-fewer';
+    note.textContent = t('guide_fewer')(dayPlans.length, days);
+    cardsEl.appendChild(note);
   }
 
   dayPlans.forEach((places, i) => {
@@ -929,6 +1005,7 @@ function initApp() {
   if (langBtn) langBtn.addEventListener("click", toggleLang);
   initBaseAutocomplete();
   applyLang(currentLang);
+  ["dateFrom","dateTo"].forEach(id => { const el = qs(id); if (el) el.min = todayIso(); });
   ["origin","destination"].forEach(id => { const el = qs(id); if (el) { el.value = ""; el.dataset.name = el.dataset.label = el.dataset.lat = el.dataset.lon = ""; } });
   const sc = qs("stopsContainer"); if (sc) sc.innerHTML = "";
   if (qs("results")) qs("results").style.display = "none";

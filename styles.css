@@ -808,6 +808,12 @@ input[type="date"]:focus {
   margin-top: 12px;
 }
 
+.guide-fewer {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
 .guide-day-card {
   background: white;
   border-radius: var(--radius);
