@@ -65,7 +65,7 @@ const T = {
     meta_no_dates:'Χωρίς ημερομηνίες', meta_no_notes:'Χωρίς σημειώσεις', meta_notes:'Σημειώσεις',
     cost_food:'Φαγητό', cost_entry:'Είσοδοι', stop_ph:'Ενδιάμεση στάση...', remove_stop:'Αφαίρεση',
     guide_program:'Πρόγραμμα', nav_back:'← Επιστροφή στην αρχική',
-    leg_from_port:'Από το λιμάνι', leg_at_port:'Άφιξη στο λιμάνι',
+    leg_from_port:'Από το λιμάνι', leg_to_port:'Προς το λιμάνι', leg_at_port:'Άφιξη στο λιμάνι',
     loading_guide:'Δημιουργία προγράμματος...',
     err_people:'Τα άτομα πρέπει να είναι ακέραιος αριθμός, από 1 και πάνω.',
     err_fuel:'Συμπλήρωσε κατανάλωση και τιμή βενζίνης με αριθμούς μεγαλύτερους από το 0, για να υπολογιστεί το κόστος.',
@@ -148,7 +148,7 @@ const T = {
     meta_no_dates:'No dates', meta_no_notes:'No notes', meta_notes:'Notes',
     cost_food:'Food', cost_entry:'Entries', stop_ph:'Add a stop...', remove_stop:'Remove',
     guide_program:'Itinerary', nav_back:'← Back to home',
-    leg_from_port:'From the port', leg_at_port:'Arrival at the port',
+    leg_from_port:'From the port', leg_to_port:'To the port', leg_at_port:'Arrival at the port',
     loading_guide:'Creating your itinerary...',
     err_people:'People must be a whole number, 1 or more.',
     err_fuel:'Enter fuel consumption and fuel price as numbers above 0, so the cost can be calculated.',
@@ -601,6 +601,13 @@ function createAutocomplete(input) {
       });
     } catch (err) { list.style.display = "none"; list.innerHTML = ""; console.error(err); }
   }, 250);
+  input.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    list.style.display = "none";
+    input.blur();
+    qs(input.id === "guideDestination" ? "guideSearchBtn" : "searchBtn")?.click();
+  });
   input.addEventListener("input", () => { input.dataset.lat = input.dataset.lon = input.dataset.label = input.dataset.name = ""; run(); });
   input.addEventListener("focus", () => { if (!input.dataset.lat) run(); });
   input.addEventListener("blur", () => setTimeout(() => { list.style.display = "none"; }, 150));
@@ -754,8 +761,10 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
   if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry + (keepTolls ? allTolls() : 0));
 
   const tollBody = qs("tollCardBody");
-  if (tollBody) tollBody.classList.add("open");
-  if (qs("tollCardIcon")) qs("tollCardIcon").textContent = "▴";
+  if (tollBody && !keepTolls) {
+    tollBody.classList.remove("open");
+    if (qs("tollCardIcon")) qs("tollCardIcon").textContent = "▾";
+  }
   renderTollPicker(vehicleKey, keepTolls);
 
   const legsContainer = qs("legs");
@@ -788,9 +797,11 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
     const legFuel = calcFuelCost(legKm, settings.fuelConsumption, settings.fuelPrice);
 
     if (!leg.endsAtStop) {
+      // Η αφετηρία είναι ήδη το λιμάνι, άρα δεν υπάρχει οδικό τμήμα να δείξουμε.
+      if (leg.distance < 300) continue;
       const roadCard = document.createElement("div");
       roadCard.className = "leg-card";
-      roadCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${escapeHtml(placeName(fromPlace))} → ${escapeHtml(placeName(toPlace))}</h3><p>${t('sea_road_leg')} • ${legKm.toFixed(1)} ${t('unit_km')} • ${formatDuration(legSec)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_fuel')}</small><strong>${euro(legFuel)}</strong></div></div></div>`;
+      roadCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${placeName(fromPlace) === placeName(toPlace) ? `${t('leg_to_port')}: ${escapeHtml(placeName(toPlace))}` : `${escapeHtml(placeName(fromPlace))} → ${escapeHtml(placeName(toPlace))}`}</h3><p>${t('sea_road_leg')} • ${legKm.toFixed(1)} ${t('unit_km')} • ${formatDuration(legSec)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_fuel')}</small><strong>${euro(legFuel)}</strong></div></div></div>`;
       legsContainer.appendChild(roadCard);
       continue;
     }

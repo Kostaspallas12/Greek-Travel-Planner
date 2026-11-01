@@ -644,7 +644,7 @@ input[type="date"]:focus {
 .toll-card .leg-head p span { color: #b45309; font-weight: 600; }
 .toll-card .leg-body {
   padding: 0 22px; max-height: 0;
-  overflow: visible;
+  overflow: hidden;
   transition: max-height 0.35s ease, padding 0.2s;
 }
 .toll-card .leg-body.open { max-height: 2000px; padding: 0 22px 22px; }
@@ -752,7 +752,7 @@ input[type="date"]:focus {
 /* ── Print ── */
 @media print {
   body { background: white !important; }
-  .navbar, .hero { display: none !important; }
+  .navbar, .hero, #planner > .card, #guide, #seaOptions, .site-footer { display: none !important; }
   .card, .leg-card { box-shadow: none !important; border: 1px solid #ddd; }
   .loading-overlay, .search-btn, .add-stop-btn, .pdf-section, .toll-card { display: none !important; }
   .leg-body { max-height: none !important; padding: 0 22px 22px !important; overflow: visible !important; }
