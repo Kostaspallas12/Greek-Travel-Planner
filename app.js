@@ -63,6 +63,15 @@ const T = {
     no_location:'Δεν βρέθηκε τοποθεσία στην Ελλάδα για',
     no_route:'Δεν βρέθηκε διαδρομή.',
     empty_field:'Υπάρχει κενό πεδίο στη διαδρομή.',
+    no_road_route:'Δεν βρέθηκε οδική διαδρομή. Αν ο προορισμός είναι μικρό νησί, δεν υπάρχει ακόμα στα δρομολόγια της εφαρμογής.',
+    no_sea_route:'Δεν βρέθηκε ακτοπλοϊκή σύνδεση στα δρομολόγια της εφαρμογής για',
+    sea_title:'⛴️ Επίλεξε πώς θα πας', sea_ferry:'Πλοίο', sea_road:'οδικά', sea_total:'συνολικά',
+    sea_person:'/άτομο', sea_no_price:'τιμή: δες την εταιρεία',
+    sea_many:'πολλά δρομολόγια τη μέρα', sea_daily:'περίπου καθημερινά', sea_weekly:'λίγες φορές την εβδομάδα',
+    sea_no_cars:'⚠️ Μόνο επιβάτες, χωρίς όχημα',
+    sea_note:'Ώρες και τιμές είναι ενδεικτικές, χωρίς αναμονή στο λιμάνι και χωρίς το εισιτήριο οχήματος. Τα δρομολόγια αλλάζουν ανά εποχή, οπότε έλεγξέ τα πριν κλείσεις.',
+    sea_tickets:'Εισιτήρια', sea_road_leg:'Οδικώς', sea_fuel:'Βενζίνη',
+    road_has_ferry:'⚠️ Η διαδρομή περιλαμβάνει πλοίο που δεν υπάρχει στα δρομολόγια της εφαρμογής, οπότε χιλιόμετρα, χρόνος και κόστος δεν είναι ακριβή.',
   },
   en: {
     nav_home:'Home', nav_planner:'Route Planner', nav_guide:'Destination Guide',
@@ -122,6 +131,15 @@ const T = {
     no_location:'No location found in Greece for',
     no_route:'No route found.',
     empty_field:'A route field is empty.',
+    no_road_route:'No road route found. If your destination is a small island, it is not in the app\'s ferry lines yet.',
+    no_sea_route:'No ferry connection in the app\'s ferry lines for',
+    sea_title:'⛴️ Choose how to get there', sea_ferry:'Ferry', sea_road:'by road', sea_total:'in total',
+    sea_person:'/person', sea_no_price:'price: check the operator',
+    sea_many:'several sailings a day', sea_daily:'roughly daily', sea_weekly:'a few times a week',
+    sea_no_cars:'⚠️ Foot passengers only, no vehicles',
+    sea_note:'Times and prices are indicative, excluding port waiting time and the vehicle ticket. Schedules change by season, so check them before booking.',
+    sea_tickets:'Tickets', sea_road_leg:'By road', sea_fuel:'Fuel',
+    road_has_ferry:'⚠️ This route includes a ferry that is not in the app\'s ferry lines, so distance, time and cost are not accurate.',
   }
 };
 
@@ -151,7 +169,7 @@ window.toggleLang = function() { applyLang(currentLang === 'el' ? 'en' : 'el'); 
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const state = { stopIndex: 0 };
+const state = { stopIndex: 0, renderId: 0, lastRender: null };
 
 const VEHICLE_LABELS = { "0.5": "Μοτοσυκλέτα", "1.0": "Αυτοκίνητο", "1.4": "Αυτοκίνητο με ρυμουλκό", "2.0": "Φορτηγό" };
 const VEHICLE_ICONS = { "0.5": "🏍️", "1.0": "🚗", "1.4": "🚙", "2.0": "🚛" };
@@ -384,7 +402,7 @@ function refreshTollUI() {
 function refreshCosts() {
   if (!window.cachedCosts) return;
   const tolls = allTolls();
-  const grand = window.cachedCosts.fuel + tolls + window.cachedCosts.food + window.cachedCosts.entry;
+  const grand = window.cachedCosts.fuel + tolls + window.cachedCosts.food + window.cachedCosts.entry + window.cachedCosts.ferry;
   if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(grand);
   if (qs("tollSumInline")) qs("tollSumInline").textContent = euro(tolls);
 }
@@ -498,17 +516,116 @@ function collectRouteInputs() { return { originInput: qs("origin"), destinationI
 function buildGoogleMapsUrl(places) { return `https://www.google.com/maps/dir/${places.map(p=>encodeURIComponent(p.label||p.name)).join("/")}`; }
 window.toggleLeg = function(header) { const body = header.nextElementSibling; if (!body) return; body.classList.toggle("open"); };
 
-async function renderResults({ places, route, settings, tripInfo }) {
-  const totalKm = route.distance / 1000;
+// ─── TRIP PLAN (ΔΡΟΜΟΣ + ΠΛΟΙΟ) ──────────────────────────────────────────────
+
+function portName(id) { return PORTS[id][currentLang] || PORTS[id].el; }
+function portPlace(id) { const p = PORTS[id]; return { name: portName(id), label: portName(id), lat: p.lat, lon: p.lon }; }
+function sameLand(a, b) { return islandAt(a.lat, a.lon) === islandAt(b.lat, b.lon); }
+
+async function fetchRoadLegs(places) {
+  let route;
+  try { route = await getRoute(places, { avoidFerries: true }); }
+  catch (err) { console.error(err); throw new Error(t('no_road_route')); }
+  return (route.legs || []).map((leg, i) => ({ type: "road", from: places[i], to: places[i+1], distance: leg.distance, time: leg.time, ferry: !!route.ferry }));
+}
+
+async function buildSeaOption(from, to, lines) {
+  const firstPort = portPlace(lines[0].from);
+  const lastPort = portPlace(lines[lines.length-1].to);
+  const [toPort, fromPort] = await Promise.all([fetchRoadLegs([from, firstPort]), fetchRoadLegs([lastPort, to])]);
+  return { lines, legs: [...toPort, ...lines.map(line => ({ type: "ferry", line })), ...fromPort] };
+}
+
+async function buildSeaSegment(from, to) {
+  const paths = findSeaPaths(from, to);
+  const built = await Promise.allSettled(paths.map(lines => buildSeaOption(from, to, lines)));
+  const options = built.filter(r => r.status === "fulfilled").map(r => r.value);
+  if (!options.length) throw new Error(`${t('no_sea_route')}: ${from.name} → ${to.name}`);
+  return { from, to, options, selected: 0 };
+}
+
+// Ο router του Geoapify δεν αποκλείει τα πλοία (το avoid=ferries είναι απλή προτίμηση) και
+// συχνά δεν βρίσκει διαδρομή προς νησιά, οπότε τα θαλάσσια τμήματα τα υπολογίζουμε εμείς.
+async function buildTripPlan(places) {
+  if (places.every((p, i) => i === 0 || sameLand(places[i-1], p))) {
+    return [{ legs: await fetchRoadLegs(places), perLegStops: true }];
+  }
+  const segments = [];
+  for (let i = 1; i < places.length; i++) {
+    const from = places[i-1], to = places[i];
+    segments.push(sameLand(from, to) ? { legs: await fetchRoadLegs([from, to]) } : await buildSeaSegment(from, to));
+  }
+  return segments;
+}
+
+function segmentLegs(seg) { return seg.options ? seg.options[seg.selected].legs : seg.legs; }
+
+// Φαγητό, είσοδοι και καιρός μετρούν μόνο στο τέλος κάθε στάσης, όχι στα λιμάνια.
+function flattenPlan(plan) {
+  return plan.flatMap(seg => {
+    const legs = segmentLegs(seg);
+    return legs.map((leg, i) => ({ ...leg, endsAtStop: seg.perLegStops || i === legs.length - 1 }));
+  });
+}
+
+function optionSummary(option) {
+  const roadLegs = option.legs.filter(l => l.type === "road");
+  const km = roadLegs.reduce((s, l) => s + l.distance, 0) / 1000;
+  const sec = roadLegs.reduce((s, l) => s + l.time * 1.05, 0) + option.lines.reduce((s, l) => s + l.hours * 3600, 0);
+  return { km, sec };
+}
+
+function renderSeaOptions(plan) {
+  const box = qs("seaOptions");
+  if (!box) return;
+  const seaSegments = plan.map((seg, i) => ({ seg, i })).filter(x => x.seg.options);
+  const hasUnknownFerry = plan.some(seg => segmentLegs(seg).some(l => l.ferry));
+  const warning = hasUnknownFerry ? `<div class="sea-warning">${t('road_has_ferry')}</div>` : "";
+  if (!seaSegments.length) { box.innerHTML = warning; return; }
+
+  box.innerHTML = `${warning}<div class="sea-card">
+    <h3>${t('sea_title')}</h3>
+    ${seaSegments.map(({ seg, i }) => `
+      ${seaSegments.length > 1 ? `<div class="sea-segment-title">${escapeHtml(seg.from.name)} → ${escapeHtml(seg.to.name)}</div>` : ""}
+      ${seg.options.map((option, j) => {
+        const { km, sec } = optionSummary(option);
+        const lines = option.lines.map(l => {
+          const price = l.price === null ? t('sea_no_price') : `${euro(l.price)}${t('sea_person')}`;
+          return `<div class="sea-option-line">${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))} · ~${formatDuration(l.hours * 3600)} · ${price}<div class="muted">${t('sea_' + l.freq)}${l.noCars ? ` · ${t('sea_no_cars')}` : ""}</div></div>`;
+        }).join("");
+        return `<label class="sea-option${j === seg.selected ? " selected" : ""}">
+          <input type="radio" name="sea_${i}" ${j === seg.selected ? "checked" : ""} onchange="selectSeaOption(${i},${j})">
+          <div class="sea-option-body">${lines}<div class="sea-option-total">${km.toFixed(0)} χλμ ${t('sea_road')} · ~${formatDuration(sec)} ${t('sea_total')}</div></div>
+        </label>`;
+      }).join("")}`).join("")}
+    <p class="sea-note">${t('sea_note')}</p>
+  </div>`;
+}
+
+window.selectSeaOption = function(segIndex, optionIndex) {
+  const last = state.lastRender;
+  if (!last) return;
+  last.plan[segIndex].selected = optionIndex;
+  renderResults({ ...last, scroll: false });
+};
+
+async function renderResults({ places, plan, settings, tripInfo, scroll = true }) {
+  const renderId = ++state.renderId;
+  state.lastRender = { places, plan, settings, tripInfo };
+  const legs = flattenPlan(plan);
+  const roadLegs = legs.filter(l => l.type === "road");
+  const ferryLegs = legs.filter(l => l.type === "ferry");
+  const totalKm = roadLegs.reduce((s, l) => s + l.distance, 0) / 1000;
   // +5% buffer για πιο ρεαλιστικό χρόνο
-  const totalDurationSec = route.time * 1.05;
-  const legs = route.legs || [];
+  const totalDurationSec = roadLegs.reduce((s, l) => s + l.time * 1.05, 0) + ferryLegs.reduce((s, l) => s + l.line.hours * 3600, 0);
   const vehicleKey = normaliseVehicleKey(settings.vehicleMultiplier);
 
   const totalFuel = calcFuelCost(totalKm, settings.fuelConsumption, settings.fuelPrice);
   const totalFood = (places.length - 1) * calcFoodCost(settings.people, settings.foodPerStop);
   const totalEntries = (places.length - 1) * calcEntryCost(settings.people, settings.entryPerStop);
-  window.cachedCosts = { fuel: totalFuel, food: totalFood, entry: totalEntries };
+  const totalFerry = ferryLegs.reduce((s, l) => s + (l.line.price || 0) * settings.people, 0);
+  window.cachedCosts = { fuel: totalFuel, food: totalFood, entry: totalEntries, ferry: totalFerry };
+  renderSeaOptions(plan);
 
   if (qs("routeTitle")) qs("routeTitle").textContent = `${places[0].name} → ${places[places.length-1].name}`;
   const dateLabel = tripInfo.dateFrom ? `${formatDate(tripInfo.dateFrom)}${tripInfo.dateTo?" – "+formatDate(tripInfo.dateTo):""}` : "Χωρίς ημερομηνίες";
@@ -521,7 +638,7 @@ async function renderResults({ places, route, settings, tripInfo }) {
   if (qs("sumDistance")) qs("sumDistance").textContent = `${totalKm.toFixed(1)} χλμ`;
   if (qs("sumDuration")) qs("sumDuration").textContent = formatDuration(totalDurationSec);
   if (qs("sumStops")) qs("sumStops").textContent = `${places.length} σημεία`;
-  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries);
+  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry);
 
   const tollBody = qs("tollCardBody");
   if (tollBody) tollBody.classList.add("open");
@@ -541,15 +658,35 @@ async function renderResults({ places, route, settings, tripInfo }) {
 
   for (let i = 0; i < legs.length; i++) {
     const leg = legs[i];
-    const fromPlace = places[i];
-    const toPlace = places[i+1];
+
+    if (leg.type === "ferry") {
+      const l = leg.line;
+      const ferryCard = document.createElement("div");
+      ferryCard.className = "leg-card";
+      ferryCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>⛴️ ${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))}</h3><p>${t('sea_ferry')} • ~${formatDuration(l.hours * 3600)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_tickets')}</small><strong>${l.price === null ? "–" : euro(l.price * settings.people)}</strong></div></div><div class="place-list"><div class="place-item"><div class="muted">${t('sea_' + l.freq)}${l.noCars ? ` · ${t('sea_no_cars')}` : ""}</div></div></div></div>`;
+      legsContainer.appendChild(ferryCard);
+      continue;
+    }
+
+    const fromPlace = leg.from;
+    const toPlace = leg.to;
     const legKm = leg.distance / 1000;
     const legSec = leg.time * 1.05;
     const legFuel = calcFuelCost(legKm, settings.fuelConsumption, settings.fuelPrice);
+
+    if (!leg.endsAtStop) {
+      const roadCard = document.createElement("div");
+      roadCard.className = "leg-card";
+      roadCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>${escapeHtml(fromPlace.name)} → ${escapeHtml(toPlace.name)}</h3><p>${t('sea_road_leg')} • ${legKm.toFixed(1)} χλμ • ${formatDuration(legSec)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_fuel')}</small><strong>${euro(legFuel)}</strong></div></div></div>`;
+      legsContainer.appendChild(roadCard);
+      continue;
+    }
+
     const legFood = calcFoodCost(settings.people, settings.foodPerStop);
     const legEntry = calcEntryCost(settings.people, settings.entryPerStop);
     const poi = getPoiForCity(toPlace.name);
     const weather = await getWeather(toPlace.lat, toPlace.lon, weatherDate);
+    if (renderId !== state.renderId) return;
 
     let weatherHtml = "";
     if (weather) {
@@ -579,7 +716,7 @@ async function renderResults({ places, route, settings, tripInfo }) {
     legsContainer.appendChild(card);
   }
 
-  if (qs("results")) { qs("results").style.display = "block"; qs("results").scrollIntoView({ behavior: "smooth", block: "start" }); }
+  if (qs("results")) { qs("results").style.display = "block"; if (scroll) qs("results").scrollIntoView({ behavior: "smooth", block: "start" }); }
 }
 
 async function handleSearch() {
@@ -605,10 +742,8 @@ async function handleSearch() {
     places.push(await resolvePlaceFromInput(originInput));
     for (const input of stopInputs) { if (input.value.trim()) places.push(await resolvePlaceFromInput(input)); }
     places.push(await resolvePlaceFromInput(destinationInput));
-    // avoid=ferries: η εφαρμογή υπολογίζει ΜΟΝΟ διαδρομές με αυτοκίνητο. Αν ο προορισμός
-    // απαιτεί πλοίο, δεν υπάρχει καθαρά οδική διαδρομή και το routing αποτυγχάνει κανονικά.
-    const route = await getRoute(places, { avoidFerries: true });
-    await renderResults({ places, route, settings, tripInfo });
+    const plan = await buildTripPlan(places);
+    await renderResults({ places, plan, settings, tripInfo });
   } catch (err) {
     console.error(err);
     showError(err.message || t('err_general'));

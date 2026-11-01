@@ -519,6 +519,30 @@ input[type="date"]:focus {
 }
 .icon-btn:hover { background: var(--coral); color: white; }
 
+/* ── Sea options ── */
+.sea-card {
+  background: white; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 18px; margin-bottom: 16px;
+}
+.sea-card h3 { color: var(--navy); font-size: 1rem; margin-bottom: 12px; }
+.sea-segment-title { font-weight: 600; font-size: 0.88rem; margin: 12px 0 8px; }
+.sea-option {
+  display: flex; gap: 10px; align-items: flex-start;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px; margin-bottom: 8px; cursor: pointer;
+}
+.sea-option.selected { border-color: var(--blue); }
+.sea-option input { margin-top: 3px; }
+.sea-option-body { flex: 1; min-width: 0; font-size: 0.9rem; }
+.sea-option-line { font-weight: 600; margin-bottom: 6px; }
+.sea-option-line .muted { font-weight: 400; font-size: 0.82rem; color: var(--text-muted); }
+.sea-option-total { font-size: 0.82rem; color: var(--text-muted); }
+.sea-note { font-size: 0.8rem; color: var(--text-muted); margin-top: 10px; line-height: 1.5; }
+.sea-warning {
+  background: #fff7ed; border: 1.5px solid #fdba74; border-radius: var(--radius-sm);
+  padding: 12px; margin-bottom: 16px; font-size: 0.88rem;
+}
+
 /* ── Error box ── */
 #errorBox {
   display: none; background: #fef2f2;
