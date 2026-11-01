@@ -66,6 +66,7 @@ const T = {
     cost_food:'Φαγητό', cost_entry:'Είσοδοι', stop_ph:'Ενδιάμεση στάση...', remove_stop:'Αφαίρεση',
     guide_program:'Πρόγραμμα', nav_back:'← Επιστροφή στην αρχική',
     leg_from_port:'Από το λιμάνι', leg_to_port:'Προς το λιμάνι', leg_at_port:'Άφιξη στο λιμάνι',
+    print_no_tolls:'Δεν επιλέχθηκαν διόδια, οπότε το κόστος δεν τα περιλαμβάνει.', print_tolls_total:'Σύνολο διοδίων',
     err_rate_limit:'Έγιναν πολλές αναζητήσεις σε λίγο χρόνο. Περίμενε ένα λεπτό και δοκίμασε ξανά.',
     loading_guide:'Δημιουργία προγράμματος...',
     err_people:'Τα άτομα πρέπει να είναι ακέραιος αριθμός, από 1 και πάνω.',
@@ -150,6 +151,7 @@ const T = {
     cost_food:'Food', cost_entry:'Entries', stop_ph:'Add a stop...', remove_stop:'Remove',
     guide_program:'Itinerary', nav_back:'← Back to home',
     leg_from_port:'From the port', leg_to_port:'To the port', leg_at_port:'Arrival at the port',
+    print_no_tolls:'No tolls selected, so the cost does not include them.', print_tolls_total:'Total tolls',
     err_rate_limit:'Too many searches in a short time. Please wait a minute and try again.',
     loading_guide:'Creating your itinerary...',
     err_people:'People must be a whole number, 1 or more.',
@@ -453,6 +455,22 @@ function refreshTollUI() {
   const grand = allTolls();
   const inlineEl = qs("tollSumInline");
   if (inlineEl) inlineEl.textContent = euro(grand);
+  renderTollPrintSummary();
+}
+
+// Η κάρτα διοδίων κρύβεται στην εκτύπωση, οπότε το PDF δείχνει μόνο όσα επέλεξε ο χρήστης.
+function renderTollPrintSummary() {
+  const box = qs("tollPrintSummary");
+  if (!box) return;
+  const vKey = tollState.vehicleKey;
+  const chosen = HIGHWAYS.filter(isHwAnyOn);
+  const rows = chosen.map(hw => {
+    const stations = hw.stations.filter(st => tollState.checkedStations[`${hw.id}__${st.name}`]);
+    const detail = hw.stations.length > 1 ? `<div class="toll-print-stations">${stations.map(st => `${escapeHtml(tollName(st.name))} ${euro(st.tolls[vKey])}`).join(" · ")}</div>` : "";
+    return `<div class="toll-print-row"><span>${escapeHtml(tollName(hw.name))}</span><strong>${euro(hwTotal(hw, vKey))}</strong></div>${detail}`;
+  }).join("");
+  const total = `<div class="toll-print-row toll-print-total"><span>${t('print_tolls_total')}</span><span>${euro(allTolls())}</span></div>`;
+  box.innerHTML = `<h3>${t('res_tolls_h')}</h3>${chosen.length ? rows + total : `<div class="toll-print-row">${t('print_no_tolls')}</div>`}`;
 }
 
 function refreshCosts() {
