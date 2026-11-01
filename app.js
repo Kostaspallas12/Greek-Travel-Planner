@@ -1,4 +1,4 @@
-const GEOAPIFY_PROXY = "/.netlify/functions/geoapify";
+const GEOAPIFY_PROXY = "/api/geoapify";
 
 // ─── I18N ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +66,7 @@ const T = {
     cost_food:'Φαγητό', cost_entry:'Είσοδοι', stop_ph:'Ενδιάμεση στάση...', remove_stop:'Αφαίρεση',
     guide_program:'Πρόγραμμα', nav_back:'← Επιστροφή στην αρχική',
     leg_from_port:'Από το λιμάνι', leg_to_port:'Προς το λιμάνι', leg_at_port:'Άφιξη στο λιμάνι',
+    err_rate_limit:'Έγιναν πολλές αναζητήσεις σε λίγο χρόνο. Περίμενε ένα λεπτό και δοκίμασε ξανά.',
     loading_guide:'Δημιουργία προγράμματος...',
     err_people:'Τα άτομα πρέπει να είναι ακέραιος αριθμός, από 1 και πάνω.',
     err_fuel:'Συμπλήρωσε κατανάλωση και τιμή βενζίνης με αριθμούς μεγαλύτερους από το 0, για να υπολογιστεί το κόστος.',
@@ -149,6 +150,7 @@ const T = {
     cost_food:'Food', cost_entry:'Entries', stop_ph:'Add a stop...', remove_stop:'Remove',
     guide_program:'Itinerary', nav_back:'← Back to home',
     leg_from_port:'From the port', leg_to_port:'To the port', leg_at_port:'Arrival at the port',
+    err_rate_limit:'Too many searches in a short time. Please wait a minute and try again.',
     loading_guide:'Creating your itinerary...',
     err_people:'People must be a whole number, 1 or more.',
     err_fuel:'Enter fuel consumption and fuel price as numbers above 0, so the cost can be calculated.',
@@ -499,7 +501,7 @@ function calcFoodCost(ppl, f) { return ppl*f; }
 function calcEntryCost(ppl, e) { return ppl*e; }
 function escapeHtml(s) { return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
 
-async function apiJson(url) { const r = await fetch(url); const d = await r.json(); if (!r.ok) throw new Error(d?.message||`HTTP ${r.status}`); return d; }
+async function apiJson(url) { const r = await fetch(url); if (r.status === 429) { const err = new Error(t('err_rate_limit')); err.rateLimited = true; throw err; } const d = await r.json(); if (!r.ok) throw new Error(d?.message||`HTTP ${r.status}`); return d; }
 function debounce(fn, delay=300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn(...a), delay); }; }
 function todayIso() { return isoDate(new Date()); }
 function isoDate(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0]; }
@@ -639,7 +641,7 @@ function sameLand(a, b) { return islandAt(a.lat, a.lon) === islandAt(b.lat, b.lo
 async function fetchRoadLegs(places) {
   let route;
   try { route = await getRoute(places, { avoidFerries: true }); }
-  catch (err) { console.error(err); throw new Error(t('no_road_route')); }
+  catch (err) { console.error(err); if (err.rateLimited) throw err; throw new Error(t('no_road_route')); }
   return (route.legs || []).map((leg, i) => ({ type: "road", from: places[i], to: places[i+1], distance: leg.distance, time: leg.time, ferry: !!route.ferry }));
 }
 
@@ -666,6 +668,8 @@ async function buildSeaOption(from, to, lines) {
 async function buildSeaSegment(from, to) {
   const paths = findSeaPaths(from, to);
   const built = await Promise.allSettled(paths.map(lines => buildSeaOption(from, to, lines)));
+  const limited = built.find(r => r.status === "rejected" && r.reason?.rateLimited);
+  if (limited) throw limited.reason;
   const options = built.filter(r => r.status === "fulfilled").map(r => r.value);
   if (!options.length) throw new Error(`${t('no_sea_route')}: ${placeName(from)} → ${placeName(to)}`);
   return { from, to, options, selected: 0 };
@@ -960,7 +964,7 @@ async function fetchGuidePlaces(lat, lon, cats, limit) {
       .map((p, order) => ({ order, score: guidePlaceScore(p), name: p.name, address: p.address_line2 || p.city || '', category: bestGuideCategory(p.categories || []) }))
       .sort((a, b) => b.score - a.score || a.order - b.order)
       .slice(0, limit);
-  } catch { return []; }
+  } catch (err) { if (err.rateLimited) throw err; return []; }
 }
 
 async function handleGuideSearch() {
