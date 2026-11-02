@@ -84,9 +84,9 @@ const T = {
     no_sea_route:'Δεν βρέθηκε ακτοπλοϊκή σύνδεση στα δρομολόγια της εφαρμογής για',
     sea_title:'⛴️ Επίλεξε πώς θα πας', sea_ferry:'Πλοίο', sea_road:'οδικά', sea_total:'συνολικά',
     sea_person:'/άτομο', sea_no_price:'τιμή: δες την εταιρεία',
-    sea_many:'πολλά δρομολόγια τη μέρα', sea_daily:'περίπου καθημερινά', sea_weekly:'λίγες φορές την εβδομάδα', sea_summer:'κυρίως το καλοκαίρι',
+    sea_many:'πολλά δρομολόγια τη μέρα', sea_daily:'περίπου καθημερινά', sea_weekly:'λίγες φορές την εβδομάδα', sea_summer:'κυρίως το καλοκαίρι', sea_offseason:'⚠️ Μπορεί να μην εκτελείται την εποχή της αναχώρησής σου', sea_schedules:'Δρομολόγια και τιμές ↗', sea_vehicle:'Εισιτήριο οχήματος, συνολικά (€) · προαιρετικό', print_vehicle:'Εισιτήριο οχήματος',
     sea_no_cars:'⚠️ Μόνο επιβάτες, χωρίς όχημα',
-    sea_note:'Ώρες και τιμές είναι ενδεικτικές, χωρίς αναμονή στο λιμάνι και χωρίς το εισιτήριο οχήματος. Τα δρομολόγια αλλάζουν ανά εποχή, οπότε έλεγξέ τα πριν κλείσεις.',
+    sea_note:'Ώρες και τιμές είναι ενδεικτικές, χωρίς αναμονή στο λιμάνι. Το εισιτήριο οχήματος μετράει μόνο αν το συμπληρώσεις. Τα δρομολόγια αλλάζουν ανά εποχή, οπότε έλεγξέ τα πριν κλείσεις.',
     sea_tickets:'Εισιτήρια', sea_road_leg:'Οδικώς', sea_fuel:'Βενζίνη',
     road_has_ferry:'⚠️ Η διαδρομή περιλαμβάνει πλοίο που δεν υπάρχει στα δρομολόγια της εφαρμογής, οπότε χιλιόμετρα, χρόνος και κόστος δεν είναι ακριβή.',
   },
@@ -169,9 +169,9 @@ const T = {
     no_sea_route:'No ferry connection in the app\'s ferry lines for',
     sea_title:'⛴️ Choose how to get there', sea_ferry:'Ferry', sea_road:'by road', sea_total:'in total',
     sea_person:'/person', sea_no_price:'price: check the operator',
-    sea_many:'several sailings a day', sea_daily:'roughly daily', sea_weekly:'a few times a week', sea_summer:'mainly in summer',
+    sea_many:'several sailings a day', sea_daily:'roughly daily', sea_weekly:'a few times a week', sea_summer:'mainly in summer', sea_offseason:'⚠️ May not run in the season of your departure', sea_schedules:'Schedules and prices ↗', sea_vehicle:'Vehicle ticket, in total (€) · optional', print_vehicle:'Vehicle ticket',
     sea_no_cars:'⚠️ Foot passengers only, no vehicles',
-    sea_note:'Times and prices are indicative, excluding port waiting time and the vehicle ticket. Schedules change by season, so check them before booking.',
+    sea_note:'Times and prices are indicative, excluding port waiting time. The vehicle ticket counts only if you enter it. Schedules change by season, so check them before booking.',
     sea_tickets:'Tickets', sea_road_leg:'By road', sea_fuel:'Fuel',
     road_has_ferry:'⚠️ This route includes a ferry that is not in the app\'s ferry lines, so distance, time and cost are not accurate.',
   }
@@ -214,7 +214,7 @@ window.toggleLang = function() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-const state = { stopIndex: 0, renderId: 0, lastRender: null, lastGuide: null };
+const state = { stopIndex: 0, renderId: 0, lastRender: null, lastGuide: null, vehicleTicket: 0 };
 
 const VEHICLE_KEYS = { "0.5": "v_moto", "1.0": "v_car", "1.4": "v_trailer", "2.0": "v_truck" };
 const VEHICLE_ICONS = { "0.5": "🏍️", "1.0": "🚗", "1.4": "🚙", "2.0": "🚛" };
@@ -476,7 +476,7 @@ function renderTollPrintSummary() {
 function refreshCosts() {
   if (!window.cachedCosts) return;
   const tolls = allTolls();
-  const grand = window.cachedCosts.fuel + tolls + window.cachedCosts.food + window.cachedCosts.entry + window.cachedCosts.ferry;
+  const grand = window.cachedCosts.fuel + tolls + window.cachedCosts.food + window.cachedCosts.entry + window.cachedCosts.ferry + state.vehicleTicket;
   if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(grand);
   if (qs("tollSumInline")) qs("tollSumInline").textContent = euro(tolls);
 }
@@ -683,26 +683,31 @@ async function buildSeaOption(from, to, lines) {
   return { lines, legs: [...legs, ...fromPort] };
 }
 
-async function buildSeaSegment(from, to) {
+// Οι εποχικές γραμμές τρέχουν κυρίως Μάιο με Οκτώβριο.
+function isOffSeason(date) { if (!date) return false; const month = Number(date.split("-")[1]); return month < 5 || month > 10; }
+function isLineUnavailable(line, date) { return line.freq === "summer" && isOffSeason(date); }
+
+async function buildSeaSegment(from, to, date) {
   const paths = findSeaPaths(from, to);
   const built = await Promise.allSettled(paths.map(lines => buildSeaOption(from, to, lines)));
   const limited = built.find(r => r.status === "rejected" && r.reason?.rateLimited);
   if (limited) throw limited.reason;
   const options = built.filter(r => r.status === "fulfilled").map(r => r.value);
   if (!options.length) throw new Error(`${t('no_sea_route')}: ${placeName(from)} → ${placeName(to)}`);
-  return { from, to, options, selected: 0 };
+  const yearRound = options.findIndex(o => !o.lines.some(l => isLineUnavailable(l, date)));
+  return { from, to, options, selected: Math.max(0, yearRound) };
 }
 
 // Ο router του Geoapify δεν αποκλείει τα πλοία (το avoid=ferries είναι απλή προτίμηση) και
 // συχνά δεν βρίσκει διαδρομή προς νησιά, οπότε τα θαλάσσια τμήματα τα υπολογίζουμε εμείς.
-async function buildTripPlan(places) {
+async function buildTripPlan(places, date) {
   if (places.every((p, i) => i === 0 || sameLand(places[i-1], p))) {
     return [{ legs: await fetchRoadLegs(places), perLegStops: true }];
   }
   const segments = [];
   for (let i = 1; i < places.length; i++) {
     const from = places[i-1], to = places[i];
-    segments.push(sameLand(from, to) ? { legs: await fetchRoadLegs([from, to]) } : await buildSeaSegment(from, to));
+    segments.push(sameLand(from, to) ? { legs: await fetchRoadLegs([from, to]) } : await buildSeaSegment(from, to, date));
   }
   return segments;
 }
@@ -724,7 +729,27 @@ function optionSummary(option) {
   return { km, sec };
 }
 
-function renderSeaOptions(plan) {
+function lineNotes(line, date) {
+  const notes = [t('sea_' + line.freq)];
+  if (line.noCars) notes.push(t('sea_no_cars'));
+  if (isLineUnavailable(line, date)) notes.push(t('sea_offseason'));
+  return notes.join(" · ");
+}
+function lineLink(line) { return `<a class="sea-link" href="${ferryPageUrl(line, currentLang)}" target="_blank" rel="noopener">${t('sea_schedules')}</a>`; }
+
+window.setVehicleTicket = function(value) {
+  state.vehicleTicket = Math.max(0, Number(value) || 0);
+  refreshCosts();
+  renderVehiclePrintSummary();
+};
+
+function renderVehiclePrintSummary() {
+  const box = qs("vehiclePrintSummary");
+  if (!box) return;
+  box.innerHTML = state.vehicleTicket > 0 ? `<div class="toll-print-row"><span>${t('print_vehicle')}</span><strong>${euro(state.vehicleTicket)}</strong></div>` : "";
+}
+
+function renderSeaOptions(plan, date) {
   const box = qs("seaOptions");
   if (!box) return;
   const seaSegments = plan.map((seg, i) => ({ seg, i })).filter(x => x.seg.options);
@@ -742,13 +767,14 @@ function renderSeaOptions(plan) {
           const prev = option.lines[k - 1];
           const transfer = prev && prev.to !== l.from ? `<div class="sea-option-transfer">🚗 ${t('sea_road_leg')}: ${escapeHtml(portName(prev.to))} → ${escapeHtml(portName(l.from))}</div>` : "";
           const price = l.price === null ? t('sea_no_price') : `${euro(l.price)}${t('sea_person')}`;
-          return `${transfer}<div class="sea-option-line">${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))} · ~${formatDuration(l.hours * 3600)} · ${price}<div class="muted">${t('sea_' + l.freq)}${l.noCars ? ` · ${t('sea_no_cars')}` : ""}</div></div>`;
+          return `${transfer}<div class="sea-option-line">${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))} · ~${formatDuration(l.hours * 3600)} · ${price}<div class="muted">${lineNotes(l, date)} · ${lineLink(l)}</div></div>`;
         }).join("");
         return `<label class="sea-option${j === seg.selected ? " selected" : ""}">
           <input type="radio" name="sea_${i}" ${j === seg.selected ? "checked" : ""} onchange="selectSeaOption(${i},${j})">
           <div class="sea-option-body">${lines}<div class="sea-option-total">${km.toFixed(0)} ${t('unit_km')} ${t('sea_road')} · ~${formatDuration(sec)} ${t('sea_total')}</div></div>
         </label>`;
       }).join("")}`).join("")}
+    <label class="sea-vehicle">${t('sea_vehicle')}<input class="sea-vehicle-input" id="vehicleTicket" type="number" min="0" step="0.5" value="${state.vehicleTicket || ""}" oninput="setVehicleTicket(this.value)"></label>
     <p class="sea-note">${t('sea_note')}</p>
   </div>`;
 }
@@ -776,7 +802,8 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
   const totalEntries = (places.length - 1) * calcEntryCost(settings.people, settings.entryPerStop);
   const totalFerry = ferryLegs.reduce((s, l) => s + (l.line.price || 0) * settings.people, 0);
   window.cachedCosts = { fuel: totalFuel, food: totalFood, entry: totalEntries, ferry: totalFerry };
-  renderSeaOptions(plan);
+  renderSeaOptions(plan, tripInfo.dateFrom);
+  renderVehiclePrintSummary();
 
   if (qs("routeTitle")) qs("routeTitle").textContent = `${placeName(places[0])} → ${placeName(places[places.length-1])}`;
   const dateLabel = tripInfo.dateFrom ? `${formatDate(tripInfo.dateFrom)}${tripInfo.dateTo?" – "+formatDate(tripInfo.dateTo):""}` : t('meta_no_dates');
@@ -789,7 +816,7 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
   if (qs("sumDistance")) qs("sumDistance").textContent = `${totalKm.toFixed(1)} ${t('unit_km')}`;
   if (qs("sumDuration")) qs("sumDuration").textContent = formatDuration(totalDurationSec);
   if (qs("sumStops")) qs("sumStops").textContent = `${places.length} ${t('unit_points')}`;
-  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry + (keepTolls ? allTolls() : 0));
+  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry + state.vehicleTicket + (keepTolls ? allTolls() : 0));
 
   const tollBody = qs("tollCardBody");
   if (tollBody && !keepTolls) {
@@ -816,7 +843,7 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
       const l = leg.line;
       const ferryCard = document.createElement("div");
       ferryCard.className = "leg-card";
-      ferryCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>⛴️ ${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))}</h3><p>${t('sea_ferry')} • ~${formatDuration(l.hours * 3600)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_tickets')}</small><strong>${l.price === null ? "–" : euro(l.price * settings.people)}</strong></div></div><div class="place-list"><div class="place-item"><div class="muted">${t('sea_' + l.freq)}${l.noCars ? ` · ${t('sea_no_cars')}` : ""}</div></div></div></div>`;
+      ferryCard.innerHTML = `<div class="leg-head" onclick="toggleLeg(this)"><div><h3>⛴️ ${escapeHtml(portName(l.from))} → ${escapeHtml(portName(l.to))}</h3><p>${t('sea_ferry')} • ~${formatDuration(l.hours * 3600)}</p></div><div>▾</div></div><div class="leg-body"><div class="cost-grid"><div class="cost-box"><small>${t('sea_tickets')}</small><strong>${l.price === null ? "–" : euro(l.price * settings.people)}</strong></div></div><div class="place-list"><div class="place-item"><div class="muted">${lineNotes(l, tripInfo.dateFrom)} · ${lineLink(l)}</div></div></div></div>`;
       legsContainer.appendChild(ferryCard);
       continue;
     }
@@ -900,6 +927,7 @@ async function handleSearch() {
   clearError();
   if (qs("results")) qs("results").style.display = "none";
   state.lastRender = null;
+  state.vehicleTicket = 0;
   const { originInput, destinationInput, stopInputs } = collectRouteInputs();
   if (!originInput || !destinationInput) { showError(t('err_missing_fields')); return; }
   if (!originInput.value.trim() || !destinationInput.value.trim()) { showError(t('err_fill_route')); return; }
@@ -919,7 +947,7 @@ async function handleSearch() {
     places.push(await resolvePlaceFromInput(destinationInput));
     const repeated = places.find((p, i) => i > 0 && haversineKm(places[i-1], p) < 0.3);
     if (repeated) throw new Error(`${t('err_same_place')}: ${repeated.name}`);
-    const plan = await buildTripPlan(places);
+    const plan = await buildTripPlan(places, tripInfo.dateFrom);
     await renderResults({ places, plan, settings, tripInfo });
   } catch (err) {
     console.error(err);

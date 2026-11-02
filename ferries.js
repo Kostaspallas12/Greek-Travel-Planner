@@ -158,6 +158,42 @@ const FERRY_LINES = [
   ["skiathos", "skopelos", 0.75, null, "daily"], ["skopelos", "alonissos", 0.5, null, "daily"], ["skiathos", "alonissos", 1.4, null, "daily"],
 ].map(([a, b, hours, price, freq, noCars]) => ({ a, b, hours, price, freq, noCars: !!noCars }));
 
+// Σελίδες δρομολογίων της Ferryhopper. Η μορφή διαφέρει ανά διαδρομή, οπότε οι διευθύνσεις έχουν ελεγχθεί μία προς μία.
+const FERRY_PAGE_BASE = "https://www.ferryhopper.com/";
+const ROUTE_PAGES = {
+  "piraeus-heraklion":"athens-to-heraklion", "piraeus-souda":"athens-to-chania", "piraeus-rhodes":"rhodes-athens", "piraeus-kos":"kos-piraeus",
+  "piraeus-patmos":"piraeus-patmos", "piraeus-leros":"leros-athens", "piraeus-kalymnos":"piraeus-kalymnos", "piraeus-astypalea":"piraeus-astypalea",
+  "piraeus-karpathos":"piraeus-karpathos", "piraeus-mytilene":"lesvos-piraeus", "piraeus-chios":"piraeus-chios", "piraeus-samos":"piraeus-samos",
+  "piraeus-ikaria":"piraeus-ikaria", "piraeus-limnos":"piraeus-lemnos", "lavrio-limnos":"lavrio-lemnos", "piraeus-santorini":"santorini-athens",
+  "piraeus-mykonos":"mykonos-athens", "piraeus-paros":"paros-athens", "piraeus-milos":"athens-milos", "piraeus-naxos":"athens-naxos",
+  "piraeus-syros":"athens-syros", "rafina-andros":"andros-rafina", "rafina-mykonos":"mykonos-rafina", "rafina-naxos":"rafina-naxos",
+  "lavrio-kythnos":"lavrio-kythnos", "lavrio-kea":"kea-lavrio", "piraeus-aegina":"athens-aegina", "piraeus-hydra":"hydra-athens",
+  "piraeus-spetses":"piraeus-spetses", "volos-skiathos":"volos-skiathos", "volos-skopelos":"volos-skopelos", "volos-alonissos":"volos-alonissos",
+  "mantoudi-skiathos":"mantoudi-skiathos", "mantoudi-skopelos":"mantoudi-skopelos", "mantoudi-alonissos":"mantoudi-alonissos", "kymi-skyros":"kymi-skyros",
+  "patras-sami":"patras-kefalonia", "patras-ithaca":"patras-ithaca", "kyllini-zakynthos":"kyllini-zante", "kyllini-kefporos":"kyllini-kefalonia",
+  "astakos-sami":"astakos-kefalonia", "astakos-ithaca":"astakos-ithaca", "igoumenitsa-corfu":"igoumenitsa-corfu", "igoumenitsa-paxi":"igoumenitsa-paxi",
+  "sami-ithaca":"kefalonia-ithaca", "thessaloniki-limnos":"thessaloniki-lemnos", "thessaloniki-mytilene":"thessaloniki-lesbos", "thessaloniki-chios":"thessaloniki-chios",
+  "thessaloniki-samos":"thessaloniki-samos", "thessaloniki-mykonos":"thessaloniki-mykonos", "thessaloniki-syros":"thessaloniki-syros", "kavala-limenas":"kavala-thassos",
+  "kavala-prinos":"kavala-thassos", "kavala-limnos":"kavala-lemnos", "kavala-mytilene":"kavala-lesvos", "kavala-chios":"kavala-chios",
+  "kavala-samos":"kavala-samos", "alexandroupoli-samothraki":"alexandroupoli-samothraki", "rhodes-kos":"kos-rhodes", "mykonos-santorini":"mykonos-to-santorini",
+  "piraeus-serifos":"athens-serifos", "piraeus-sifnos":"athens-to-sifnos", "serifos-sifnos":"serifos-sifnos", "piraeus-ios":"ios-piraeus",
+  "piraeus-folegandros":"athens-folegandros", "piraeus-amorgos":"amorgos-athens", "piraeus-poros":"piraeus-poros", "neapoli-kythira":"neapoli-kythira",
+  "gythio-kythira":"gythio-kythira", "kissamos-kythira":"kissamos-kythira", "rhodes-symi":"rhodes-symi", "vasiliki-fiskardo":"lefkada-kefalonia",
+  "vasiliki-frikes":"lefkada-ithaca", "frikes-fiskardo":"kefalonia-ithaca", "agnikolaos-pessada":"zante-kefalonia", "santorini-heraklion":"heraklion-to-santorini",
+  "santorini-paros":"paros-santorini", "santorini-milos":"milos-santorini", "ios-paros":"ios-paros", "mykonos-paros":"mykonos-to-paros",
+  "mykonos-naxos":"mykonos-to-naxos", "paros-naxos":"naxos-paros", "paros-amorgos":"paros-amorgos", "andros-tinos":"andros-tinos",
+  "kos-kalymnos":"kos-kalymnos", "rhodes-kalymnos":"rhodes-kalymnos", "heraklion-karpathos":"heraklion-karpathos", "mytilene-chios":"lesvos-chios",
+  "chios-samos":"chios-samos", "samos-ikaria":"samos-ikaria", "skiathos-skopelos":"skopelos-skiathos", "skopelos-alonissos":"skopelos-alonissos",
+  "skiathos-alonissos":"skiathos-alonissos",
+};
+// Αυτές οι σελίδες δεν υπάρχουν στα ελληνικά.
+const ENGLISH_ONLY_PAGES = ["leros-athens", "santorini-athens", "athens-naxos", "athens-syros", "amorgos-athens", "andros-tinos"];
+function ferryPageUrl(line, lang) {
+  const slug = ROUTE_PAGES[`${line.a}-${line.b}`];
+  if (!slug) return `${FERRY_PAGE_BASE}${lang}/ferry-routes`;
+  return `${FERRY_PAGE_BASE}${ENGLISH_ONLY_PAGES.includes(slug) ? "en" : lang}/ferry-routes/direct/${slug}`;
+}
+
 // Τα νησιά δεν βγαίνουν αξιόπιστα από το geocoding (π.χ. το «Λέσβος» φέρνει ουζερί στην Αθήνα).
 const ISLAND_NAMES = [
   { el: "Κρήτη", en: "Crete", port: "heraklion", alt: ["kriti"] }, { el: "Ρόδος", en: "Rhodes", port: "rhodes", alt: ["rodos"] },
@@ -255,4 +291,4 @@ function findSeaPaths(from, to, maxOptions = 3) {
   return [];
 }
 
-if (typeof module !== "undefined") module.exports = { ISLANDS, PORTS, FERRY_LINES, ISLAND_NAMES, islandAt, findSeaPaths, haversineKm, findIslandExact, findIslandsByPrefix };
+if (typeof module !== "undefined") module.exports = { ISLANDS, PORTS, FERRY_LINES, ISLAND_NAMES, ROUTE_PAGES, ferryPageUrl, islandAt, findSeaPaths, haversineKm, findIslandExact, findIslandsByPrefix };
