@@ -551,6 +551,7 @@ input[type="date"]:focus {
 .sea-option-total { font-size: 0.82rem; color: var(--text-muted); }
 .round-trip { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 0.88rem; cursor: pointer; }
 .round-trip input { width: 18px; height: 18px; accent-color: var(--blue); flex-shrink: 0; }
+.official-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 14px; font-size: 0.88rem; line-height: 1.5; color: var(--text); }
 .round-trip-note { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
 .share-btn { margin-left: 14px; padding: 6px 12px; background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 600; color: var(--blue); cursor: pointer; }
 .share-btn:hover { border-color: var(--blue); }
