@@ -42,6 +42,7 @@ const PORTS = {
   galatas: { el: "Γαλατάς", en: "Galatas", lat: 37.497, lon: 23.462, island: null },
   neapoli: { el: "Νεάπολη Βοιών", en: "Neapoli Voion", lat: 36.515, lon: 23.06, island: null },
   gythio: { el: "Γύθειο", en: "Gythio", lat: 36.76, lon: 22.565, island: null },
+  vasiliki: { el: "Βασιλική (Λευκάδα)", en: "Vasiliki (Lefkada)", lat: 38.627, lon: 20.605, island: null },
   // Λιμάνια νησιών
   heraklion: { el: "Ηράκλειο", en: "Heraklion", lat: 35.343, lon: 25.137, island: "crete" },
   souda: { el: "Σούδα (Χανιά)", en: "Souda (Chania)", lat: 35.49, lon: 24.08, island: "crete" },
@@ -92,9 +93,13 @@ const PORTS = {
   kythira: { el: "Κύθηρα (Διακόφτι)", en: "Kythira (Diakofti)", lat: 36.265, lon: 23.08, island: "kythira" },
   poros: { el: "Πόρος", en: "Poros", lat: 37.502, lon: 23.455, island: "poros" },
   symi: { el: "Σύμη", en: "Symi", lat: 36.615, lon: 27.84, island: "symi" },
+  fiskardo: { el: "Φισκάρδο (Κεφαλονιά)", en: "Fiskardo (Kefalonia)", lat: 38.458, lon: 20.577, island: "kefalonia" },
+  pessada: { el: "Πεσσάδα (Κεφαλονιά)", en: "Pessada (Kefalonia)", lat: 38.11, lon: 20.585, island: "kefalonia" },
+  frikes: { el: "Φρίκες (Ιθάκη)", en: "Frikes (Ithaca)", lat: 38.46, lon: 20.66, island: "ithaca" },
+  agnikolaos: { el: "Άγιος Νικόλαος (Ζάκυνθος)", en: "Agios Nikolaos (Zakynthos)", lat: 37.905, lon: 20.71, island: "zakynthos" },
 };
 
-// [λιμάνι, λιμάνι, ώρες, από €/άτομο (null = άγνωστο), συχνότητα: many | daily | weekly, noCars]
+// [λιμάνι, λιμάνι, ώρες, από €/άτομο (null = άγνωστο), συχνότητα: many | daily | weekly | summer, noCars]
 const FERRY_LINES = [
   ["piraeus", "heraklion", 9, 33, "many"], ["piraeus", "souda", 9, 52, "daily"],
   ["piraeus", "rhodes", 14, 46, "daily"], ["piraeus", "kos", 11, 63, "daily"],
@@ -129,12 +134,28 @@ const FERRY_LINES = [
   ["kavala", "limnos", 4.5, 16, "weekly"], ["kavala", "mytilene", 10, 27, "weekly"],
   ["kavala", "chios", 13, 27, "weekly"], ["kavala", "samos", 17, 27, "weekly"],
   ["alexandroupoli", "samothraki", 2.25, null, "daily"],
-  ["rhodes", "kos", 4, null, "daily"], ["mykonos", "santorini", 2.5, null, "daily"],
+  ["rhodes", "kos", 3, null, "summer"], ["mykonos", "santorini", 2.75, null, "summer"],
   ["piraeus", "serifos", 3.5, 37, "daily"], ["piraeus", "sifnos", 4.5, null, "daily"], ["serifos", "sifnos", 0.6, 14, "daily"],
   ["piraeus", "ios", 4.25, 48, "daily"], ["piraeus", "folegandros", 3.75, 48, "daily"], ["piraeus", "amorgos", 8, null, "daily"],
   ["piraeus", "poros", 1.5, 17, "many"], ["galatas", "poros", 0.15, null, "many"],
   ["neapoli", "kythira", 1.25, 12.5, "daily"], ["gythio", "kythira", 2.5, 9, "weekly"], ["kissamos", "kythira", 3.6, 14, "weekly"],
   ["rhodes", "symi", 1.25, null, "daily"],
+  // Ιόνιο
+  ["vasiliki", "fiskardo", 1, 10, "summer"], ["vasiliki", "frikes", 1.25, null, "summer"], ["frikes", "fiskardo", 0.75, null, "summer"],
+  ["agnikolaos", "pessada", 1.75, 12, "daily"],
+  // Κυκλάδες και Κρήτη
+  ["santorini", "heraklion", 1.75, 15, "summer"], ["santorini", "ios", 0.6, null, "summer"], ["santorini", "paros", 1.75, null, "summer"],
+  ["santorini", "milos", 2.5, null, "summer"], ["ios", "paros", 1.5, null, "summer"], ["mykonos", "paros", 1.25, null, "summer"],
+  ["mykonos", "naxos", 2, null, "summer"], ["paros", "naxos", 0.6, null, "many"], ["paros", "amorgos", 2.75, null, "summer"],
+  ["andros", "tinos", 1.5, null, "daily"],
+  // Δωδεκάνησα
+  ["kos", "kalymnos", 1.25, null, "daily"], ["rhodes", "kalymnos", 4, null, "summer"], ["kalymnos", "patmos", 1.6, null, "summer"],
+  ["rhodes", "karpathos", 3.75, null, "weekly"], ["heraklion", "karpathos", 6.5, null, "weekly"],
+  // Βόρειο Αιγαίο
+  ["mytilene", "chios", 2.85, null, "daily"], ["mytilene", "samos", 5.25, null, "weekly"], ["chios", "samos", 3.3, null, "weekly"],
+  ["samos", "ikaria", 2, null, "daily"], ["limnos", "mytilene", 6, null, "weekly"], ["chios", "patmos", 7.85, null, "weekly"],
+  // Σποράδες
+  ["skiathos", "skopelos", 0.75, null, "daily"], ["skopelos", "alonissos", 0.5, null, "daily"], ["skiathos", "alonissos", 1.4, null, "daily"],
 ].map(([a, b, hours, price, freq, noCars]) => ({ a, b, hours, price, freq, noCars: !!noCars }));
 
 // Τα νησιά δεν βγαίνουν αξιόπιστα από το geocoding (π.χ. το «Λέσβος» φέρνει ουζερί στην Αθήνα).
