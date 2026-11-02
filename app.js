@@ -65,6 +65,8 @@ const T = {
     meta_no_dates:'Χωρίς ημερομηνίες', meta_no_notes:'Χωρίς σημειώσεις', meta_notes:'Σημειώσεις',
     cost_food:'Φαγητό', cost_entry:'Είσοδοι', stop_ph:'Ενδιάμεση στάση...', remove_stop:'Αφαίρεση',
     guide_program:'Πρόγραμμα', nav_back:'← Επιστροφή στην αρχική',
+    form_round:'Με επιστροφή (μετράει πήγαινε-έλα στο κόστος)', res_round_note:'🔁 Χιλιόμετρα, χρόνος, βενζίνη, διόδια και εισιτήρια πλοίου μετρούν πήγαινε-έλα. Το αναλυτικό πλάνο δείχνει το πήγαινε.',
+    share_btn:'🔗 Κοινοποίηση', share_copied:'✓ Ο σύνδεσμος αντιγράφηκε', share_prompt:'Αντίγραψε τον σύνδεσμο:', guide_maps:'Δες το στο Google Maps ↗',
     leg_from_port:'Από το λιμάνι', leg_to_port:'Προς το λιμάνι', leg_at_port:'Άφιξη στο λιμάνι',
     print_no_tolls:'Δεν επιλέχθηκαν διόδια, οπότε το κόστος δεν τα περιλαμβάνει.', print_tolls_total:'Σύνολο διοδίων',
     err_rate_limit:'Έγιναν πολλές αναζητήσεις σε λίγο χρόνο. Περίμενε ένα λεπτό και δοκίμασε ξανά.',
@@ -150,6 +152,8 @@ const T = {
     meta_no_dates:'No dates', meta_no_notes:'No notes', meta_notes:'Notes',
     cost_food:'Food', cost_entry:'Entries', stop_ph:'Add a stop...', remove_stop:'Remove',
     guide_program:'Itinerary', nav_back:'← Back to home',
+    form_round:'Round trip (counts there and back in the cost)', res_round_note:'🔁 Distance, time, fuel, tolls and ferry tickets count there and back. The detailed plan shows the way there.',
+    share_btn:'🔗 Share', share_copied:'✓ Link copied', share_prompt:'Copy the link:', guide_maps:'View on Google Maps ↗',
     leg_from_port:'From the port', leg_to_port:'To the port', leg_at_port:'Arrival at the port',
     print_no_tolls:'No tolls selected, so the cost does not include them.', print_tolls_total:'Total tolls',
     err_rate_limit:'Too many searches in a short time. Please wait a minute and try again.',
@@ -323,6 +327,8 @@ function hwTotal(hw, vKey) {
   }, 0);
 }
 
+function tripTolls() { return allTolls() * (window.cachedCosts?.tollFactor || 1); }
+
 function allTolls() {
   return HIGHWAYS.reduce((s, hw) => s + hwTotal(hw, tollState.vehicleKey), 0);
 }
@@ -452,7 +458,7 @@ function refreshTollUI() {
     }
   }
 
-  const grand = allTolls();
+  const grand = tripTolls();
   const inlineEl = qs("tollSumInline");
   if (inlineEl) inlineEl.textContent = euro(grand);
   renderTollPrintSummary();
@@ -469,13 +475,13 @@ function renderTollPrintSummary() {
     const detail = hw.stations.length > 1 ? `<div class="toll-print-stations">${stations.map(st => `${escapeHtml(tollName(st.name))} ${euro(st.tolls[vKey])}`).join(" · ")}</div>` : "";
     return `<div class="toll-print-row"><span>${escapeHtml(tollName(hw.name))}</span><strong>${euro(hwTotal(hw, vKey))}</strong></div>${detail}`;
   }).join("");
-  const total = `<div class="toll-print-row toll-print-total"><span>${t('print_tolls_total')}</span><span>${euro(allTolls())}</span></div>`;
+  const total = `<div class="toll-print-row toll-print-total"><span>${t('print_tolls_total')}${window.cachedCosts?.tollFactor > 1 ? " (×2)" : ""}</span><span>${euro(tripTolls())}</span></div>`;
   box.innerHTML = `<h3>${t('res_tolls_h')}</h3>${chosen.length ? rows + total : `<div class="toll-print-row">${t('print_no_tolls')}</div>`}`;
 }
 
 function refreshCosts() {
   if (!window.cachedCosts) return;
-  const tolls = allTolls();
+  const tolls = tripTolls();
   const grand = window.cachedCosts.fuel + tolls + window.cachedCosts.food + window.cachedCosts.entry + window.cachedCosts.ferry + state.vehicleTicket;
   if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(grand);
   if (qs("tollSumInline")) qs("tollSumInline").textContent = euro(tolls);
@@ -499,14 +505,30 @@ const POI_BY_CITY = {
     en: { sights: [["Central Square", "The city's meeting point"], ["Folklore Museum", "A look at local history"]], food: [["Local tavern", "Try local flavours"], ["Kozani centre", "Coffee and food"]] } },
 };
 const POI_ALIASES = { thessaloniki: "θεσσαλονικη", athens: "αθηνα", patras: "πατρα", patra: "πατρα", kozani: "κοζανη" };
-const POI_DEFAULT = {
-  el: { sights: [["Κεντρική πλατεία", "Καλή πρώτη στάση για βόλτα"]], food: [["Τοπική ταβέρνα", "Δοκίμασε τοπική κουζίνα"]] },
-  en: { sights: [["Central square", "A good first stop for a walk"]], food: [["Local tavern", "Try the local cuisine"]] },
-};
+const STOP_POI_COUNT = 3;
+const stopPoiCache = new Map();
 
 function qs(id) { return document.getElementById(id); }
 function greekKey(str) { return String(str || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
-function getPoiForCity(name) { const k = greekKey(name); const pois = POI_BY_CITY[POI_ALIASES[k] || k] || POI_DEFAULT; return pois[currentLang] || pois.el; }
+function getPoiForCity(name) { const k = greekKey(name); const pois = POI_BY_CITY[POI_ALIASES[k] || k]; return pois ? (pois[currentLang] || pois.el) : null; }
+
+// Για τις υπόλοιπες πόλεις φέρνουμε πραγματικά μέρη. Αν δεν βρεθούν, η ενότητα απλώς δεν εμφανίζεται.
+async function getStopPois(place) {
+  const curated = getPoiForCity(placeName(place));
+  if (curated) return curated;
+  const key = `${place.lat},${place.lon},${currentLang}`;
+  if (stopPoiCache.has(key)) return stopPoiCache.get(key);
+  const toLines = places => places.map(p => [p.name, guideCatLabel(p.category)]);
+  try {
+    const [sights, food] = await Promise.all([
+      fetchGuidePlaces(place.lat, place.lon, "tourism.attraction,tourism.sights,entertainment.museum", STOP_POI_COUNT),
+      fetchGuidePlaces(place.lat, place.lon, "catering.restaurant", STOP_POI_COUNT),
+    ]);
+    const pois = { sights: toLines(sights), food: toLines(food) };
+    stopPoiCache.set(key, pois);
+    return pois;
+  } catch { return { sights: [], food: [] }; }
+}
 function poiLines(items) { return items.map(([name, desc]) => `${escapeHtml(name)} — ${escapeHtml(desc)}`).join("<br>"); }
 function showError(msg) { const b = qs("errorBox"); if (!b) return; b.textContent = msg; b.style.display = "block"; }
 function clearError() { const b = qs("errorBox"); if (!b) return; b.textContent = ""; b.style.display = "none"; }
@@ -792,16 +814,19 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
   const legs = flattenPlan(plan);
   const roadLegs = legs.filter(l => l.type === "road");
   const ferryLegs = legs.filter(l => l.type === "ferry");
-  const totalKm = roadLegs.reduce((s, l) => s + l.distance, 0) / 1000;
+  const tripFactor = tripInfo.roundTrip ? 2 : 1;
+  const totalKm = tripFactor * roadLegs.reduce((s, l) => s + l.distance, 0) / 1000;
   // +5% buffer για πιο ρεαλιστικό χρόνο
-  const totalDurationSec = roadLegs.reduce((s, l) => s + l.time * 1.05, 0) + ferryLegs.reduce((s, l) => s + l.line.hours * 3600, 0);
+  const totalDurationSec = tripFactor * (roadLegs.reduce((s, l) => s + l.time * 1.05, 0) + ferryLegs.reduce((s, l) => s + l.line.hours * 3600, 0));
   const vehicleKey = normaliseVehicleKey(settings.vehicleMultiplier);
 
   const totalFuel = calcFuelCost(totalKm, settings.fuelConsumption, settings.fuelPrice);
   const totalFood = (places.length - 1) * calcFoodCost(settings.people, settings.foodPerStop);
   const totalEntries = (places.length - 1) * calcEntryCost(settings.people, settings.entryPerStop);
-  const totalFerry = ferryLegs.reduce((s, l) => s + (l.line.price || 0) * settings.people, 0);
-  window.cachedCosts = { fuel: totalFuel, food: totalFood, entry: totalEntries, ferry: totalFerry };
+  const totalFerry = tripFactor * ferryLegs.reduce((s, l) => s + (l.line.price || 0) * settings.people, 0);
+  window.cachedCosts = { fuel: totalFuel, food: totalFood, entry: totalEntries, ferry: totalFerry, tollFactor: tripFactor };
+  const roundNote = qs("roundTripNote");
+  if (roundNote) { roundNote.textContent = t('res_round_note'); roundNote.style.display = tripInfo.roundTrip ? "block" : "none"; }
   renderSeaOptions(plan, tripInfo.dateFrom);
   renderVehiclePrintSummary();
 
@@ -816,7 +841,7 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
   if (qs("sumDistance")) qs("sumDistance").textContent = `${totalKm.toFixed(1)} ${t('unit_km')}`;
   if (qs("sumDuration")) qs("sumDuration").textContent = formatDuration(totalDurationSec);
   if (qs("sumStops")) qs("sumStops").textContent = `${places.length} ${t('unit_points')}`;
-  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry + state.vehicleTicket + (keepTolls ? allTolls() : 0));
+  if (qs("sumTotalCost")) qs("sumTotalCost").textContent = euro(totalFuel + totalFood + totalEntries + totalFerry + state.vehicleTicket + (keepTolls ? tripTolls() : 0));
 
   const tollBody = qs("tollCardBody");
   if (tollBody && !keepTolls) {
@@ -866,7 +891,7 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
 
     const legFood = calcFoodCost(settings.people, settings.foodPerStop);
     const legEntry = calcEntryCost(settings.people, settings.entryPerStop);
-    const poi = getPoiForCity(placeName(toPlace));
+    const poi = await getStopPois(toPlace);
     const weather = await getWeather(toPlace.lat, toPlace.lon, weatherDate);
     if (renderId !== state.renderId) return;
 
@@ -892,8 +917,8 @@ async function renderResults({ places, plan, settings, tripInfo, scroll = true, 
         </div>
         <div class="place-list">
           ${weatherHtml}
-          <div class="place-item"><strong>${t('leg_sights')}</strong><div class="muted">${poiLines(poi.sights)}</div></div>
-          <div class="place-item"><strong>${t('leg_food')}</strong><div class="muted">${poiLines(poi.food)}</div></div>
+          ${poi.sights.length ? `<div class="place-item"><strong>${t('leg_sights')}</strong><div class="muted">${poiLines(poi.sights)}</div></div>` : ""}
+          ${poi.food.length ? `<div class="place-item"><strong>${t('leg_food')}</strong><div class="muted">${poiLines(poi.food)}</div></div>` : ""}
           <div class="place-item"><strong>${t('leg_arrival')}</strong><div class="muted">${escapeHtml(placeLabel(toPlace))}</div></div>
         </div>
       </div>`;
@@ -917,6 +942,83 @@ function readSettings() {
   return { vehicleMultiplier: Number(qs("vehicleType")?.value || 1.0), people, fuelConsumption, fuelPrice, foodPerStop, entryPerStop };
 }
 
+const SETTING_FIELDS = ["vehicleType", "people", "fuelConsumption", "fuelPrice", "foodPerStop", "entryPerStop"];
+const SETTINGS_KEY = "tripSettings";
+
+function saveSettings() {
+  const saved = {};
+  SETTING_FIELDS.forEach(id => { saved[id] = qs(id)?.value ?? ""; });
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(saved)); } catch {}
+}
+
+function restoreSettings() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch {}
+  if (!saved) return;
+  SETTING_FIELDS.forEach(id => { const el = qs(id); if (el && typeof saved[id] === "string" && saved[id] !== "") el.value = saved[id]; });
+}
+
+// ─── SHARE ───────────────────────────────────────────────────────────────────
+
+function buildShareUrl() {
+  const { places, tripInfo } = state.lastRender;
+  const params = new URLSearchParams();
+  places.forEach(p => params.append("p", `${p.lat},${p.lon},${placeName(p)}|${placeLabel(p)}`));
+  SETTING_FIELDS.forEach(id => { const v = qs(id)?.value; if (v) params.set(id, v); });
+  if (tripInfo.dateFrom) params.set("dateFrom", tripInfo.dateFrom);
+  if (tripInfo.dateTo) params.set("dateTo", tripInfo.dateTo);
+  if (tripInfo.roundTrip) params.set("roundTrip", "1");
+  return `${location.origin}${location.pathname}?${params.toString()}`;
+}
+
+async function shareTrip() {
+  if (!state.lastRender) return;
+  const url = buildShareUrl();
+  const btn = qs("shareBtn");
+  try {
+    await navigator.clipboard.writeText(url);
+    if (btn) { btn.textContent = t('share_copied'); setTimeout(() => { btn.textContent = t('share_btn'); }, 2500); }
+  } catch { window.prompt(t('share_prompt'), url); }
+}
+
+function fillPlaceInput(input, { name, label, lat, lon }) {
+  input.value = label;
+  input.dataset.name = name;
+  input.dataset.label = label;
+  input.dataset.lat = lat;
+  input.dataset.lon = lon;
+}
+
+function parseSharedPlace(raw) {
+  const [lat, lon, ...rest] = raw.split(",");
+  const [name, label] = rest.join(",").split("|").map(part => part.trim());
+  const place = { lat: Number(lat), lon: Number(lon), name, label: label || name };
+  return Number.isFinite(place.lat) && Number.isFinite(place.lon) && place.name ? place : null;
+}
+
+// Ανοίγει το ταξίδι ενός κοινόχρηστου συνδέσμου, χωρίς να αλλάξει τις αποθηκευμένες ρυθμίσεις του επισκέπτη.
+function applySharedTrip() {
+  const params = new URLSearchParams(location.search);
+  const places = params.getAll("p").map(parseSharedPlace);
+  if (places.length < 2 || places.some(p => !p) || !qs("origin")) return;
+  fillPlaceInput(qs("origin"), places[0]);
+  fillPlaceInput(qs("destination"), places[places.length - 1]);
+  places.slice(1, -1).forEach(place => {
+    const row = createStopRow();
+    qs("stopsContainer")?.appendChild(row);
+    fillPlaceInput(row.querySelector("input"), place);
+  });
+  SETTING_FIELDS.forEach(id => { const el = qs(id); if (el && params.has(id)) el.value = params.get(id); });
+  const dateFrom = params.get("dateFrom") || "";
+  if (dateFrom >= todayIso()) {
+    qs("dateFrom").value = dateFrom;
+    if (params.get("dateTo")) qs("dateTo").value = params.get("dateTo");
+  }
+  if (qs("roundTrip")) qs("roundTrip").checked = params.get("roundTrip") === "1";
+  state.skipSaveSettings = true;
+  handleSearch();
+}
+
 function validateDates(dateFrom, dateTo) {
   if (dateTo && !dateFrom) throw new Error(t('err_no_depart'));
   if (dateFrom && dateFrom < todayIso()) throw new Error(t('err_past_date'));
@@ -932,12 +1034,14 @@ async function handleSearch() {
   if (!originInput || !destinationInput) { showError(t('err_missing_fields')); return; }
   if (!originInput.value.trim() || !destinationInput.value.trim()) { showError(t('err_fill_route')); return; }
 
-  const tripInfo = { dateFrom: qs("dateFrom")?.value||"", dateTo: qs("dateTo")?.value||"", notes: qs("notes")?.value.trim()||"" };
+  const tripInfo = { dateFrom: qs("dateFrom")?.value||"", dateTo: qs("dateTo")?.value||"", notes: qs("notes")?.value.trim()||"", roundTrip: !!qs("roundTrip")?.checked };
   let settings;
   try {
     settings = readSettings();
     validateDates(tripInfo.dateFrom, tripInfo.dateTo);
   } catch (err) { showError(err.message); return; }
+  if (!state.skipSaveSettings) saveSettings();
+  state.skipSaveSettings = false;
 
   try {
     showLoader(true);
@@ -1061,6 +1165,8 @@ async function handleGuideSearch() {
   }
 }
 
+function placeMapsUrl(p) { return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.name, p.address].filter(Boolean).join(", "))}`; }
+
 function renderGuideResults(place, dayPlans, days, scroll = true) {
   state.lastGuide = [place, dayPlans, days];
   const resultsEl = qs('guideResults');
@@ -1101,6 +1207,7 @@ function renderGuideResults(place, dayPlans, days, scroll = true) {
               <div class="guide-place-name">${escapeHtml(p.name)}</div>
               <div class="guide-place-type">${escapeHtml(guideCatLabel(p.category))}</div>
               ${p.address ? `<div class="guide-place-address">${escapeHtml(p.address)}</div>` : ''}
+              <a class="sea-link guide-place-map" href="${placeMapsUrl(p)}" target="_blank" rel="noopener">${t('guide_maps')}</a>
             </div>
           </div>`).join('')}
       </div>`;
@@ -1125,8 +1232,25 @@ function initMenu() {
   links.addEventListener("click", e => { if (e.target.closest("a")) setOpen(false); });
 }
 
+function initRoundTrip() {
+  const box = qs("roundTrip");
+  if (!box) return;
+  qs("dateTo")?.addEventListener("change", e => { if (e.target.value) box.checked = true; updateRoundTrip(); });
+  box.addEventListener("change", updateRoundTrip);
+}
+
+function updateRoundTrip() {
+  const last = state.lastRender;
+  if (!last) return;
+  last.tripInfo.roundTrip = qs("roundTrip").checked;
+  renderResults({ ...last, scroll: false, keepTolls: true });
+}
+
 function initApp() {
   initMenu();
+  restoreSettings();
+  initRoundTrip();
+  qs("shareBtn")?.addEventListener("click", shareTrip);
   const addStopBtn = qs("addStopBtn");
   const searchBtn = qs("searchBtn");
   if (addStopBtn) addStopBtn.addEventListener("click", () => { const c = qs("stopsContainer"); if (c) c.appendChild(createStopRow()); });
@@ -1142,6 +1266,7 @@ function initApp() {
   const sc = qs("stopsContainer"); if (sc) sc.innerHTML = "";
   if (qs("results")) qs("results").style.display = "none";
   clearError();
+  applySharedTrip();
 }
 
 document.addEventListener("DOMContentLoaded", () => {

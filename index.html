@@ -148,6 +148,11 @@
       </div>
     </div>
 
+    <label class="round-trip">
+      <input type="checkbox" id="roundTrip">
+      <span data-i18n="form_round">Με επιστροφή (μετράει πήγαινε-έλα στο κόστος)</span>
+    </label>
+
     <!-- Ρυθμίσεις -->
     <div class="form-section-title" style="margin-top:20px;" data-i18n="form_settings">Ρυθμίσεις</div>
     <div class="igc">
@@ -241,7 +246,10 @@
          style="font-size:0.88rem; color:var(--blue); font-weight:600; text-decoration:none;">
         🗺️ Άνοιγμα στο Google Maps ↗
       </a>
+      <button class="share-btn" id="shareBtn" type="button" data-i18n="share_btn">🔗 Κοινοποίηση</button>
     </div>
+
+    <p class="round-trip-note" id="roundTripNote" style="display:none;"></p>
 
     <div class="sum-grid">
       <div class="sum-box">

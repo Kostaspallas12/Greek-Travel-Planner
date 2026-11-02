@@ -549,6 +549,12 @@ input[type="date"]:focus {
 .sea-option-line { font-weight: 600; margin-bottom: 6px; }
 .sea-option-line .muted { font-weight: 400; font-size: 0.82rem; color: var(--text-muted); }
 .sea-option-total { font-size: 0.82rem; color: var(--text-muted); }
+.round-trip { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 0.88rem; cursor: pointer; }
+.round-trip input { width: 18px; height: 18px; accent-color: var(--blue); flex-shrink: 0; }
+.round-trip-note { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+.share-btn { margin-left: 14px; padding: 6px 12px; background: transparent; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 600; color: var(--blue); cursor: pointer; }
+.share-btn:hover { border-color: var(--blue); }
+.guide-place-map { display: inline-block; font-size: 0.8rem; margin-top: 4px; }
 .sea-link { color: var(--blue); font-weight: 600; text-decoration: none; }
 .sea-link:hover { text-decoration: underline; }
 .sea-vehicle { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; font-weight: 500; margin-top: 12px; }
@@ -762,7 +768,7 @@ input[type="date"]:focus {
   .card, .leg-card { box-shadow: none !important; border: 1px solid #ddd; }
   .loading-overlay, .search-btn, .add-stop-btn, .pdf-section, .toll-card { display: none !important; }
   .leg-body { max-height: none !important; padding: 0 22px 22px !important; overflow: visible !important; }
-  .sea-link { display: none !important; }
+  .sea-link, .share-btn, #mapsLink { display: none !important; }
   .toll-print:empty { display: none !important; }
   .toll-print { display: block; border: 1px solid #ddd; border-radius: var(--radius); padding: 16px 22px; margin-bottom: 20px; break-inside: avoid; }
   .toll-print h3 { font-size: 1rem; margin-bottom: 8px; }
